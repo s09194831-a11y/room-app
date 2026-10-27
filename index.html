@@ -222,6 +222,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     <button class="tool" type="button" data-tool="shape" data-ic="cube"><span>ปั้นรูปทรง</span></button>
     <button class="tool" type="button" data-tool="door" data-ic="door"><span>ประตู</span></button>
     <button class="tool" type="button" data-tool="window" data-ic="window"><span>หน้าต่าง</span></button>
+    <button class="tool" type="button" data-tool="wire" data-ic="bolt"><span>สายไฟ</span></button>
     <button class="tool" type="button" data-tool="add" data-ic="add"><span>เพิ่มของ</span></button>
   </nav>
 
@@ -238,6 +239,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
       <div class="hint" id="hint" hidden></div>
       <div class="drawbar" id="drawBar" hidden>
         <span id="dbTxt"></span>
+        <span class="seg sm" id="dbKinds" hidden></span>
         <label class="dlen" for="dbLen">ยาว<input id="dbLen" type="number" inputmode="numeric" min="1" placeholder="ซม."></label>
         <button class="btn sm" id="dbUndo" type="button">ย้อนจุด</button>
         <button class="btn sm pri" id="dbClose" type="button">ปิดห้อง</button>
@@ -248,6 +250,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
       <canvas id="c3d" aria-label="ภาพห้อง 3 มิติ"></canvas>
       <div class="ov">
         <button class="ovb" id="roofBtn" type="button" aria-pressed="false" aria-label="หลังคา" title="เปิดหรือปิดหลังคา" data-ic="roof" data-is="18"><span>หลังคา</span></button>
+        <button class="ovb" id="lightBtn" type="button" aria-pressed="false" aria-label="เปิดไฟ" title="เปิดไฟ ดูตอนกลางคืน" data-ic="bulb" data-is="18"><span>เปิดไฟ</span></button>
         <button class="ovb" id="wallBtn" type="button" title="ความสูงผนัง" data-ic="walls" data-is="18"><span id="wallTxt">ผนังอัตโนมัติ</span></button>
         <button class="ovb" id="walkBtn" type="button" aria-pressed="false" aria-label="เดินดู" data-ic="walk" data-is="18"><span>เดินดู</span></button>
         <button class="ovb" id="fit3" type="button" aria-label="มุมเริ่มต้น" title="มุมเริ่มต้น" data-ic="fit" data-is="18"></button>
@@ -344,6 +347,8 @@ const IC={
   roof:'<path d="M2.5 12.5L12 4.5l9.5 8"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M15.5 6.5V4h2.5v4.6"/>',
   save:'<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
   cube:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
+  bolt:'<path d="M13.5 2.5L5 13.5h6.5l-1 8 8.5-11h-6.5z"/>',
+  bulb:'<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
   grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   pdf:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 16.5v-4h1.6a1.3 1.3 0 0 1 0 2.6H9M13.5 16.5v-4h1a2 2 0 0 1 0 4z"/>'
 };
@@ -368,6 +373,10 @@ function mat(color,o){
   if(!matCache[k]) matCache[k]=new T.MeshStandardMaterial(Object.assign({color:color,roughness:0.78,metalness:0},o||{}));
   return matCache[k];
 }
+/* หลอดไฟเรืองแสง: ตอน "เปิดไฟ" ใน 3D จะสว่างขึ้นทุกดวงพร้อมกัน */
+const GLOWS=[];
+function glowMat(color,ds){ const k='glow|'+color+(ds?'|ds':''); if(!matCache[k]){ matCache[k]=new T.MeshStandardMaterial({color,emissive:'#ffd9a0',emissiveIntensity:UI.night?1.4:0.35,roughness:0.5,side:ds?T.DoubleSide:T.FrontSide}); GLOWS.push(matCache[k]); } return matCache[k]; }
+const glow=(m,c,ds)=>{ m.material=glowMat(c,ds); m.castShadow=false; return m; };
 function sh(m){ m.castShadow=true; m.receiveShadow=true; return m; }
 function addBox(g,w,h,d,color,x,y,z,o){ const m=sh(new T.Mesh(new T.BoxGeometry(w,h,d),mat(color,o))); m.position.set(x,y+h/2,z); g.add(m); return m; }
 function addCyl(g,rt,rb,h,color,x,y,z,o,seg){ const m=sh(new T.Mesh(new T.CylinderGeometry(rt,rb,h,seg||20),mat(color,o))); m.position.set(x,y+h/2,z); g.add(m); return m; }
@@ -377,7 +386,7 @@ function rnd(){ seed=(seed*16807)%2147483647; return seed/2147483647; }
 const col=(it,d)=>(it&&it.color)||d;
 
 /* ---------------- แคตตาล็อกของ (กว้าง w · ลึก d · สูง h เป็นเมตร, ด้านหน้าของหันไปทาง +z) ---------------- */
-const CATS=[['mine','ของในห้องฉัน'],['bedroom','ห้องนอน'],['work','ทำงาน/เกม'],['living','นั่งเล่น'],['hobby','งานอดิเรก/เล่น'],['kitchen','ครัว'],['bath','ห้องน้ำ'],['decor','ของแต่ง/สัตว์เลี้ยง'],['farm','เล้าไก่/ฟาร์ม'],['mushroom','โรงเห็ด'],['other','อื่น ๆ']];
+const CATS=[['mine','ของในห้องฉัน'],['bedroom','ห้องนอน'],['work','ทำงาน/เกม'],['living','นั่งเล่น'],['hobby','งานอดิเรก/เล่น'],['kitchen','ครัว'],['bath','ห้องน้ำ'],['decor','ของแต่ง/สัตว์เลี้ยง'],['farm','เล้าไก่/ฟาร์ม'],['mushroom','โรงเห็ด'],['elec','ไฟฟ้า'],['other','อื่น ๆ']];
 const C={}, ORDER=[];
 function def(key,cat,name,w,d,h,make,extra){ C[key]=Object.assign({key,cat,name,w,d,h,make,elev:0},extra||{}); ORDER.push(key); }
 
@@ -599,7 +608,7 @@ def('tv50','living','ทีวี 50 นิ้ว',1.12,0.22,0.7,g=>{ [-0.42,0.4
 def('rug','living','พรม',1.6,2.3,0.02,(g,it)=>{ const c=col(it,'#b9a58c'); addBox(g,1.6,0.012,2.3,shade(c,-0.15),0,0,0); addBox(g,1.44,0.014,2.14,c,0,0,0); },{colorable:1,flat:1});
 def('rugr','living','พรมกลม',1.2,1.2,0.02,(g,it)=>{ const c=col(it,'#8e9fb1'); addCyl(g,0.6,0.6,0.012,shade(c,-0.15),0,0,0,null,40); addCyl(g,0.52,0.52,0.014,c,0,0,0,null,40); },{colorable:1,flat:1});
 def('plant','living','ต้นไม้กระถาง',0.4,0.4,1.2,(g,it)=>{ addCyl(g,0.17,0.13,0.32,col(it,'#c9734a'),0,0,0); addCyl(g,0.015,0.015,0.5,'#6b4f2e',0,0.3,0); seed=5; for(let i=0;i<7;i++) addBlob(g,0.12+rnd()*0.05,i%2?'#3f8a43':'#5aa152',(rnd()-0.5)*0.22,0.7+rnd()*0.4,(rnd()-0.5)*0.22,1,1.2,1); },{colorable:1});
-def('flamp','living','โคมไฟตั้งพื้น',0.35,0.35,1.6,(g,it)=>{ addCyl(g,0.16,0.16,0.025,BK,0,0,0); addCyl(g,0.012,0.012,1.3,BK,0,0.02,0); addCyl(g,0.11,0.17,0.25,col(it,'#f1e6cf'),0,1.33,0,{emissive:'#ffdca0',emissiveIntensity:.35}); },{colorable:1});
+def('flamp','living','โคมไฟตั้งพื้น',0.35,0.35,1.6,(g,it)=>{ addCyl(g,0.16,0.16,0.025,BK,0,0,0); addCyl(g,0.012,0.012,1.3,BK,0,0.02,0); glow(addCyl(g,0.11,0.17,0.25,col(it,'#f1e6cf'),0,1.33,0),col(it,'#f1e6cf')); },{colorable:1,light:1,lightY:0.85});
 def('fridge2','kitchen','ตู้เย็น 2 ประตู',0.6,0.65,1.6,(g,it)=>{ const c=col(it,'#c9ccd0'); addBox(g,0.6,1.6,0.65,c,0,0,0,{metalness:.35,roughness:.45}); addBox(g,0.58,0.008,0.006,shade(c,-0.35),0,1.12,0.326); [[1.22,0.25],[0.55,0.45]].forEach(p=>addBox(g,0.025,p[1],0.03,'#6b7076',0.24,p[0],0.34)); },{colorable:1});
 function counterBase(g,w,c){ addBox(g,w,0.08,0.55,BK,0,0,-0.02); addBox(g,w,0.72,0.58,c,0,0.08,0); const n=Math.max(1,Math.round(w/0.4)); for(let i=1;i<n;i++) addBox(g,0.004,0.66,0.004,shade(c,-0.3),-w/2+i*w/n,0.11,0.291); addBox(g,w,0.05,0.6,'#d9d6cf',0,0.8,0); }
 def('counter','kitchen','เคาน์เตอร์ครัว + ซิงก์',1.2,0.6,0.85,(g,it)=>{ counterBase(g,1.2,col(it,'#e9e4da')); addBox(g,0.5,0.012,0.38,'#a9afb5',-0.25,0.85,0.02,{metalness:.6,roughness:.3}); addCyl(g,0.015,0.015,0.25,MT,-0.25,0.85,-0.22,{metalness:.7}); const sp=addBox(g,0.02,0.02,0.14,MT,0,0,0,{metalness:.7}); sp.position.set(-0.25,1.1,-0.16); },{colorable:1});
@@ -757,7 +766,7 @@ def('towelrack','bath','ราวแขวนผ้าเช็ดตัว',0.6
 def('bigplant','decor','ต้นไม้ใหญ่',0.7,0.7,2.0,(g,it)=>{ addCyl(g,0.3,0.24,0.45,col(it,'#e9e4da'),0,0,0,null,24); addCyl(g,0.04,0.05,1.0,'#6b4f2e',0,0.4,0); seed=17; for(let i=0;i<11;i++) addBlob(g,0.16+rnd()*0.08,i%3?'#3f8a43':'#5aa152',(rnd()-0.5)*0.4,1.15+rnd()*0.65,(rnd()-0.5)*0.4,1,1.15,1); },{colorable:1});
 def('wallart','decor','รูปติดผนัง',0.8,0.04,0.6,(g,it)=>{ addBox(g,0.8,0.6,0.03,'#2b2d31',0,0,0); addBox(g,0.72,0.52,0.005,col(it,'#e8b931'),0,0.04,0.016); addBlob(g,0.12,'#e0553d',-0.12,0.32,0.02,1,1,0.15); addBox(g,0.5,0.12,0.004,'#3f8a43',0.05,0.1,0.02); },{colorable:1,elev:1.4});
 def('wallclock','decor','นาฬิกาแขวน',0.35,0.05,0.35,(g,it)=>{ const f=addCyl(g,0.175,0.175,0.04,col(it,'#2b2d31'),0,0,0,null,32); f.rotation.x=Math.PI/2; f.position.set(0,0.175,0); const fc=addCyl(g,0.155,0.155,0.01,'#ffffff',0,0,0,null,32); fc.rotation.x=Math.PI/2; fc.position.set(0,0.175,0.022); const h1=addBox(g,0.012,0.09,0.004,'#111',0,0,0); h1.position.set(0,0.21,0.03); const h2=addBox(g,0.01,0.12,0.004,'#111',0,0,0); h2.position.set(0.04,0.175,0.03); h2.rotation.z=-1.2; },{colorable:1,elev:1.8});
-def('ceilinglamp','decor','โคมไฟเพดาน',0.5,0.5,0.35,(g,it)=>{ addCyl(g,0.008,0.008,0.15,'#2b2d31',0,0.2,0); addCyl(g,0.08,0.25,0.2,col(it,'#f1e6cf'),0,0,0,{emissive:'#ffdca0',emissiveIntensity:0.45,side:T.DoubleSide},28); },{colorable:1,elev:2.1});
+def('ceilinglamp','decor','โคมไฟเพดาน',0.5,0.5,0.35,(g,it)=>{ addCyl(g,0.008,0.008,0.15,'#2b2d31',0,0.2,0); glow(addCyl(g,0.08,0.25,0.2,col(it,'#f1e6cf'),0,0,0,null,28),col(it,'#f1e6cf'),1); },{colorable:1,elev:2.1,light:1,lightY:0.3});
 def('cattree','decor','คอนโดแมว',0.6,0.6,1.5,(g,it)=>{
   const c=col(it,'#d9c3a2'); addBox(g,0.6,0.05,0.6,c,0,0,0); [[-0.18,-0.18],[0.18,0.18]].forEach(p=>addCyl(g,0.05,0.05,1.4,'#c9b38a',p[0],0.05,p[1]));
   addBox(g,0.36,0.3,0.36,c,-0.1,0.05,0.1); const hole=addCyl(g,0.08,0.08,0.01,'#3a2d22',0,0,0,null,20); hole.rotation.x=Math.PI/2; hole.position.set(-0.1,0.2,0.285);
@@ -822,6 +831,17 @@ def('hygro','mushroom','เครื่องวัดความชื้น',
 def('scale','mushroom','ตาชั่ง',0.35,0.35,0.14,(g,it)=>{ const c=col(it,'#e9e4da'); addBox(g,0.32,0.08,0.3,c,0,0,0); addBox(g,0.08,0.04,0.01,'#1b3a2a',0,0.03,0.151,{emissive:'#1d5a3a',emissiveIntensity:0.5}); addCyl(g,0.16,0.16,0.02,'#9aa1a8',0,0.1,0,{metalness:.6},24); },{colorable:1});
 def('pallet','mushroom','แคร่ / พาเลทไม้',1.2,0.8,0.15,(g,it)=>{ const c=col(it,'#b58a5f'); [-0.35,0,0.35].forEach(z=>addBox(g,1.2,0.09,0.1,shade(c,-0.15),0,0,z)); for(let i=0;i<7;i++) addBox(g,0.14,0.025,0.8,c,-0.53+i*0.177,0.09,0); },{colorable:1,table:1});
 def('dogbed','decor','ที่นอนสุนัข',0.8,0.6,0.25,(g,it)=>{ const c=col(it,'#7a5236'); const r=addCyl(g,0.4,0.38,0.22,c,0,0,0,null,28); r.scale.z=0.75; const cu=addCyl(g,0.32,0.32,0.08,'#e9e3d5',0,0.05,0,null,28); cu.scale.z=0.75; addBlob(g,0.14,'#c8a06a',0.05,0.2,0,1.5,0.6,1); addBlob(g,0.07,'#c8a06a',-0.17,0.22,0.05,1,0.9,1); },{colorable:1});
+/* ไฟฟ้า: elec = ชนิดที่นับ (plug/switch/light/panel/other) · ceil = ติดเพดาน · light = ส่องสว่างตอน "เปิดไฟ" (lightY = ระดับดวงไฟในตัวของ) */
+def('outlet','elec','ปลั๊กไฟคู่',0.12,0.03,0.08,(g,it)=>{ const c=col(it,'#f3f1ec'); addBox(g,0.12,0.08,0.02,c,0,0,-0.005); [-0.028,0.028].forEach(x=>{ addBox(g,0.038,0.05,0.006,shade(c,-0.1),x,0.015,0.008); [-0.008,0.008].forEach(dx=>addBox(g,0.004,0.014,0.002,'#2b2d31',x+dx,0.03,0.012)); }); },{elec:'plug',colorable:1,elev:0.3});
+def('strip','elec','ปลั๊กพ่วง',0.35,0.06,0.04,(g,it)=>{ const c=col(it,'#f3f1ec'); addBox(g,0.35,0.04,0.06,c,0,0,0); for(let i=0;i<4;i++) addBox(g,0.045,0.004,0.035,shade(c,-0.15),-0.12+i*0.07,0.04,0); addBox(g,0.03,0.006,0.02,'#c2263f',0.155,0.04,0); },{elec:'plug',colorable:1});
+def('switch','elec','สวิตช์ไฟ',0.08,0.03,0.12,(g,it)=>{ const c=col(it,'#f3f1ec'); addBox(g,0.08,0.12,0.02,c,0,0,-0.005); addBox(g,0.04,0.06,0.01,shade(c,-0.08),0,0.03,0.01); },{elec:'switch',colorable:1,elev:1.2});
+def('breaker','elec','ตู้ไฟ (เบรกเกอร์)',0.3,0.1,0.4,(g,it)=>{ const c=col(it,'#d9d4ca'); addBox(g,0.3,0.4,0.1,c,0,0,0); addBox(g,0.26,0.004,0.004,shade(c,-0.3),0,0.2,0.051); addBox(g,0.2,0.07,0.006,'#2b2d31',0,0.24,0.051); for(let i=0;i<6;i++) addBox(g,0.022,0.04,0.008,i?'#f3f1ec':'#c2263f',-0.07+i*0.028,0.255,0.053); addBox(g,0.03,0.02,0.01,'#e8b931',0,0.34,0.052); },{elec:'panel',colorable:1,elev:1.4});
+def('ledpanel','elec','โคมไฟเพดาน LED',0.32,0.32,0.05,g=>{ addCyl(g,0.16,0.16,0.035,'#f3f1ec',0,0.015,0,null,32); glow(addCyl(g,0.145,0.145,0.016,'#fff8ec',0,0,0,null,32),'#fff8ec'); },{elec:'light',light:1,ceil:1,lightY:0});
+def('downlight','elec','ดาวน์ไลท์',0.12,0.12,0.04,g=>{ addCyl(g,0.06,0.06,0.01,'#f3f1ec',0,0.03,0,null,24); addCyl(g,0.045,0.05,0.025,'#d9d4ca',0,0.006,0,null,24); glow(addCyl(g,0.04,0.04,0.006,'#fff8ec',0,0,0,null,24),'#fff8ec'); },{elec:'light',light:1,ceil:1,lightY:0});
+def('tube','elec','หลอดนีออน 120 ซม.',1.22,0.1,0.06,g=>{ addBox(g,1.22,0.025,0.1,'#f3f1ec',0,0.035,0); const t=glow(addCyl(g,0.014,0.014,1.18,'#fff8ec',0,0,0,null,12),'#fff8ec'); t.rotation.z=Math.PI/2; t.position.set(0,0.02,0); },{elec:'light',light:1,ceil:1,lightY:0});
+def('walllamp','elec','โคมไฟผนัง',0.2,0.16,0.26,(g,it)=>{ addBox(g,0.08,0.12,0.02,'#2b2d31',0,0.07,-0.07); addBox(g,0.02,0.02,0.08,'#2b2d31',0,0.12,-0.03); glow(addCyl(g,0.07,0.09,0.16,col(it,'#f1e6cf'),0,0.06,0.02,null,24),col(it,'#f1e6cf'),1); },{elec:'light',light:1,colorable:1,elev:1.75,lightY:0.5});
+def('hbulb','elec','หลอดไฟห้อย',0.14,0.14,0.45,g=>{ addCyl(g,0.04,0.04,0.02,'#2b2d31',0,0.43,0); addCyl(g,0.004,0.004,0.3,'#2b2d31',0,0.13,0); addCyl(g,0.018,0.018,0.04,'#b58a5f',0,0.1,0); glow(addBlob(g,0.05,'#fff3d6',0,0.06,0,1,1.15,1),'#fff3d6'); },{elec:'light',light:1,ceil:1,lightY:0.13});
+def('cfan','elec','พัดลมเพดาน',1.2,1.2,0.42,(g,it)=>{ const c=col(it,'#f3f1ec'); addCyl(g,0.06,0.06,0.03,c,0,0.39,0); addCyl(g,0.012,0.012,0.25,'#9aa1a8',0,0.14,0); addCyl(g,0.1,0.08,0.1,c,0,0.05,0,null,24); for(let i=0;i<3;i++){ const a=i*Math.PI*2/3, b=addBox(g,0.5,0.008,0.12,shade(c,-0.05),Math.cos(a)*0.33,0.08,Math.sin(a)*0.33); b.rotation.y=-a; } },{elec:'other',colorable:1,ceil:1});
 
 const ITEM_COLORS=['#f3f1ec','#d9cfbf','#b58a5f','#7a5236','#2b2d31','#6b7280','#3f6fb5','#2f7d6b','#c2263f','#e8b931','#e58bb0','#8e5bb5'];
 const FLOOR_COLORS=['#c49a6c','#a87449','#7a5236','#d8c3a2','#e8e4dc','#bfc4c4','#8d969b','#d9cbb8','#6aa84f','#4f8a3a','#a08a64'];
@@ -834,7 +854,15 @@ const WALL_COLORS=['#f4f2ed','#ece7dc','#e6ebe4','#e3e9f0','#f0e4d8','#d9d4ca','
 const FLOOR_NAMES={wood:'ไม้',tile:'กระเบื้อง',plain:'เรียบ',grass:'หญ้า'};
 const ROOF_COLORS=['#b5523b','#8e2f2a','#d0763a','#7a4b33','#6f757a','#3b3f44','#3f5f8a','#3f6b4f'];
 const PITCHES=[[20,'ชันน้อย'],[30,'กลาง'],[40,'ชันมาก']];
-const roofOf=p=>p.roof||(p.roof={color:ROOF_COLORS[0],pitch:30,axis:'auto'});
+const ROOF_STYLES={gable:'จั่ว',hip:'ปั้นหยา',shed:'เพิงหมาแหงน',flat:'แบน'};
+const OVERS=[[0,'ไม่มี'],[0.3,'30'],[0.6,'60'],[0.9,'90'],[1.2,'120']];
+const ROOF_VIEWS=[['skin','ผิวหลังคา'],['frame','โครงหลังคา'],['both','ทั้งคู่']];
+const newRoof=()=>({color:ROOF_COLORS[0],pitch:30,axis:'auto',mat:'tile',style:'gable',over:0.45,gutter:false,mode:'all',flip:false});
+const roofOf=p=>p.roof||(p.roof=newRoof());
+/* สายไฟ {id,pts,c}: เส้นบนแปลน วิ่งใต้ฝ้า จุดที่วางบนของไฟฟ้ามีสายลงไปหาของนั้น */
+const WIRE_KINDS={light:['ไฟแสงสว่าง','#e0a100'],plug:['ปลั๊ก','#d6453d'],other:['อื่น ๆ','#3f6fb5']};
+const isElec=it=>!!(C[it.type]&&C[it.type].elec);
+const isLight=it=>!!(C[it.type]&&C[it.type].light);
 const nameOf=it=>it.name||(C[it.type]?C[it.type].name:'ของ');
 const isFlat=it=>!!(C[it.type]&&C[it.type].flat);
 
@@ -864,27 +892,28 @@ function overlapItems(a,b){
   return true;
 }
 const topOf=it=>(it.elev||0)+it.h;
-function ignorePair(a,b){ const A=C[a.type]||{}, B=C[b.type]||{}; if(A.flat||B.flat) return true; if((A.tuck&&B.table)||(B.tuck&&A.table)) return true; if((A.table&&(b.elev||0)>=0.6)||(B.table&&(a.elev||0)>=0.6)) return true; return !((a.elev||0)<topOf(b)-0.005&&(b.elev||0)<topOf(a)-0.005); }
+function ignorePair(a,b){ const A=C[a.type]||{}, B=C[b.type]||{}; if(A.flat||B.flat||A.elec||B.elec) return true; if((A.tuck&&B.table)||(B.tuck&&A.table)) return true; if((A.table&&(b.elev||0)>=0.6)||(B.table&&(a.elev||0)>=0.6)) return true; return !((a.elev||0)<topOf(b)-0.005&&(b.elev||0)<topOf(a)-0.005); }
 function raySeg(px,py,dx,dy,ax,ay,bx,by){ const ex=bx-ax, ey=by-ay, den=dx*ey-dy*ex; if(Math.abs(den)<1e-9) return null; const t=((ax-px)*ey-(ay-py)*ex)/den, u=((ax-px)*dy-(ay-py)*dx)/den; if(t<-1e-6||u<-1e-6||u>1+1e-6) return null; return t; }
 
 /* ---------------- ข้อมูลแปลน ---------------- */
 let P=null, ALL={}, SEL=null, TOOL='select', AUTO=null;
 let PROB={}, STATS={};
-const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null};
+const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null,wires:true,roofView:'skin',night:false,wireKind:'light'};
 const getItem=id=>P.items.find(o=>o.id===id);
 const getRoom=id=>P.rooms.find(o=>o.id===id);
 const getOpen=id=>P.openings.find(o=>o.id===id);
 const getShape=id=>P.shapes.find(o=>o.id===id);
-function selObj(){ if(!SEL||!P) return null; return SEL.kind==='item'?getItem(SEL.id):SEL.kind==='room'?getRoom(SEL.id):SEL.kind==='shape'?getShape(SEL.id):getOpen(SEL.id); }
+const getWire=id=>P.wires.find(o=>o.id===id);
+function selObj(){ if(!SEL||!P) return null; return SEL.kind==='item'?getItem(SEL.id):SEL.kind==='room'?getRoom(SEL.id):SEL.kind==='shape'?getShape(SEL.id):SEL.kind==='wire'?getWire(SEL.id):getOpen(SEL.id); }
 function roomAt(x,y){ for(let i=P.rooms.length-1;i>=0;i--) if(pip(x,y,P.rooms[i].pts)) return P.rooms[i]; return null; }
 /* แปลนหนึ่งอันมีได้หลายชั้น: p.floors[k] = {rooms, openings, items}; p.rooms / p.openings / p.items ชี้ไปที่ชั้นที่เปิดอยู่ (p.cur) */
 const SLAB=0.2;
-function newFloor(k){ return {id:uid('f'),name:'ชั้น '+(k+1),rooms:[],openings:[],items:[],shapes:[]}; }
+function newFloor(k){ return {id:uid('f'),name:'ชั้น '+(k+1),rooms:[],openings:[],items:[],shapes:[],wires:[]}; }
 /* รูปทรงที่ปั้นเอง (แบบ SketchUp): {id,name,pts,h,elev,color,mat} พื้นรูปหลายเหลี่ยม ดึงขึ้นสูง h จากระดับ elev */
 const SHAPE_MATS={plain:'สีเรียบ',wood:'ไม้',concrete:'ปูน',glass:'กระจก'};
 const SHAPE_COLORS=['#d9d4ca','#f3f1ec','#b58a5f','#7a5236','#9aa1a8','#5b6670','#2b2d31','#3f6fb5','#2f7d6b','#6aa84f','#c2263f','#e8b931'];
-function attachFloors(p){ ['rooms','openings','items','shapes'].forEach(k=>Object.defineProperty(p,k,{configurable:true,enumerable:false,get(){ return this.floors[this.cur][k]; },set(v){ this.floors[this.cur][k]=v; }})); return p; }
-function blankProject(name){ return attachFloors({v:2,id:uid('p'),name:name||'แปลนห้อง',updated:Date.now(),wallH:2.5,wallT:0.1,roof:{color:ROOF_COLORS[0],pitch:30,axis:'auto',mat:'tile'},floors:[newFloor(0)],cur:0}); }
+function attachFloors(p){ ['rooms','openings','items','shapes','wires'].forEach(k=>Object.defineProperty(p,k,{configurable:true,enumerable:false,get(){ return this.floors[this.cur][k]; },set(v){ this.floors[this.cur][k]=v; }})); return p; }
+function blankProject(name){ return attachFloors({v:2,id:uid('p'),name:name||'แปลนห้อง',updated:Date.now(),wallH:2.5,wallT:0.1,roof:newRoof(),floors:[newFloor(0)],cur:0}); }
 const elevOf=k=>k*(P.wallH+SLAB);
 const curFloor=()=>P.floors[P.cur];
 const allOf=(p,k)=>p.floors.flatMap(f=>f[k]);
@@ -927,7 +956,7 @@ function tplProject(){
 }
 /* เล้าไก่ตัวอย่าง: ตัวเล้าผนังตาข่ายกรอบไม้ หลังคาไม้+ตาข่าย และลานหญ้าล้อมรั้วด้านข้าง */
 function coopProject(){
-  const p=blankProject('เล้าไก่ตัวอย่าง'); p.wallH=2.2; p.roof={color:'#8a5a3b',pitch:40,axis:'auto',mat:'mix'};
+  const p=blankProject('เล้าไก่ตัวอย่าง'); p.wallH=2.2; p.roof=Object.assign(newRoof(),{color:'#8a5a3b',pitch:40,mat:'mix'});
   const coop={id:uid('r'),name:'เล้าไก่',pts:rectPts(0,0,2.4,3.0),floor:'grass',floorColor:'#6aa84f',wallColor:'#ece7dc',wallType:'mesh'};
   const yard={id:uid('r'),name:'ลานปล่อยไก่',pts:rectPts(2.5,0,3.5,3.0),floor:'grass',floorColor:'#4f8a3a',wallColor:'#ece7dc',wallType:'none'};
   p.rooms=[coop,yard];
@@ -942,7 +971,7 @@ function coopProject(){
 }
 /* โรงเห็ดตัวอย่าง 4×6 ม.: ผนังสแลน หลังคามุงจาก ชั้นวางก้อนเห็ดสองฝั่ง ทางเดินกลาง ท่อพ่นหมอกตามแนวหลังคา */
 function mushroomProject(){
-  const p=blankProject('โรงเห็ดตัวอย่าง'); p.wallH=2.4; p.roof={color:'#b08a4a',pitch:30,axis:'auto',mat:'thatch'};
+  const p=blankProject('โรงเห็ดตัวอย่าง'); p.wallH=2.4; p.roof=Object.assign(newRoof(),{color:'#b08a4a',pitch:30,mat:'thatch'});
   const r={id:uid('r'),name:'โรงเพาะเห็ด',pts:rectPts(0,0,4,6),floor:'plain',floorColor:'#a08a64',wallColor:'#ece7dc',wallType:'net'};
   p.rooms=[r]; p.openings=[{id:uid('o'),kind:'door',room:r.id,edge:2,t:2.0,w:0.9,h:2.0,sill:0,hinge:0,out:false}];
   const add=(type,x,y,rot,opt)=>{ const c=C[type]; p.items.push(Object.assign({id:uid('i'),type,x,y,rot:rot||0,w:c.w,d:c.d,h:c.h,elev:c.elev||0},opt||{})); };
@@ -958,7 +987,7 @@ function cleanProject(p){
   const q=blankProject(String(p.name||'แปลนห้อง').slice(0,80));
   if(typeof p.id==='string'&&/^[A-Za-z0-9_.~:@+-]{1,60}$/.test(p.id)) q.id=p.id;
   q.updated=num(p.updated,Date.now()); q.wallH=clamp(num(p.wallH,2.5),1.8,5); q.wallT=clamp(num(p.wallT,0.1),0.04,0.4);
-  const rf=p.roof||{}; q.roof={color:validColor(rf.color)||ROOF_COLORS[0],pitch:clamp(num(rf.pitch,30),10,50),axis:rf.axis==='x'||rf.axis==='y'?rf.axis:'auto',mat:ROOF_MATS[rf.mat]?rf.mat:'tile'};
+  const rf=p.roof||{}; q.roof={color:validColor(rf.color)||ROOF_COLORS[0],pitch:clamp(num(rf.pitch,30),10,50),axis:rf.axis==='x'||rf.axis==='y'?rf.axis:'auto',mat:ROOF_MATS[rf.mat]?rf.mat:'tile',style:ROOF_STYLES[rf.style]?rf.style:'gable',over:clamp(num(rf.over,0.45),0,1.5),gutter:!!rf.gutter,mode:rf.mode==='room'?'room':'all',flip:!!rf.flip};
   const src=Array.isArray(p.floors)&&p.floors.length?p.floors.slice(0,12):[{rooms:p.rooms,openings:p.openings,items:p.items}];
   q.floors=src.map((f,k)=>{
     const fl=newFloor(k); f=f||{}; if(typeof f.id==='string'&&f.id) fl.id=f.id.slice(0,40); if(f.name) fl.name=String(f.name).slice(0,40);
@@ -966,7 +995,7 @@ function cleanProject(p){
       if(!r||!Array.isArray(r.pts)) return;
       const pts=r.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]);
       if(pts.length<3) return;
-      fl.rooms.push({id:String(r.id||uid('r')),name:String(r.name||'ห้อง').slice(0,60),pts,floor:FLOOR_NAMES[r.floor]?r.floor:'wood',floorColor:validColor(r.floorColor)||FLOOR_COLORS[0],wallColor:validColor(r.wallColor)||WALL_COLORS[0],wallType:WALL_TYPES[r.wallType]?r.wallType:'solid'});
+      fl.rooms.push({id:String(r.id||uid('r')),name:String(r.name||'ห้อง').slice(0,60),pts,floor:FLOOR_NAMES[r.floor]?r.floor:'wood',floorColor:validColor(r.floorColor)||FLOOR_COLORS[0],wallColor:validColor(r.wallColor)||WALL_COLORS[0],wallType:WALL_TYPES[r.wallType]?r.wallType:'solid',roof:(ROOF_STYLES[r.roof]||r.roof==='none')?r.roof:''});
     });
     const rid=new Set(fl.rooms.map(r=>r.id));
     (Array.isArray(f.openings)?f.openings:[]).forEach(o=>{
@@ -983,6 +1012,10 @@ function cleanProject(p){
     (Array.isArray(f.shapes)?f.shapes:[]).forEach(s=>{
       if(!s||!Array.isArray(s.pts)) return; const pts=s.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]); if(pts.length<3) return;
       fl.shapes.push({id:String(s.id||uid('s')),name:String(s.name||'รูปทรง').slice(0,60),pts,h:clamp(num(s.h,1),0.01,30),elev:clamp(num(s.elev,0),0,30),color:validColor(s.color)||SHAPE_COLORS[0],mat:SHAPE_MATS[s.mat]?s.mat:'plain'});
+    });
+    (Array.isArray(f.wires)?f.wires:[]).forEach(w=>{
+      if(!w||!Array.isArray(w.pts)) return; const pts=w.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]); if(pts.length<2) return;
+      fl.wires.push({id:String(w.id||uid('w')),pts,c:WIRE_KINDS[w.c]?w.c:'light'});
     });
     return fl;
   });
@@ -1022,7 +1055,7 @@ function wallSpec(fl,room,i){
 }
 const isStair=it=>!!(C[it.type]&&C[it.type].stair);
 const itemH=it=>isStair(it)?P.wallH+SLAB:it.h;
-const shellKey=()=>JSON.stringify([P.wallH,P.wallT,P.cur,P.floors.map(f=>[f.rooms,f.openings,f.items.filter(isStair)]),roofOf(P)]);
+const shellKey=()=>JSON.stringify([P.wallH,P.wallT,P.cur,P.floors.map(f=>[f.rooms,f.openings,f.items.filter(isStair)]),roofOf(P),UI.roofView]);
 function wallsOf(fl){ const out=[]; fl.rooms.forEach(r=>{ for(let i=0;i<r.pts.length;i++) out.push(wallSpec(fl,r,i)); }); return out; }
 let WC=null, WCK='';
 function walls(){ const k=JSON.stringify([P.wallH,P.wallT,P.cur,P.rooms,P.openings]); if(k!==WCK||!WC){ WCK=k; WC=wallsOf(curFloor()); } return WC; }
@@ -1056,6 +1089,7 @@ const stairHoles=k=>k>0&&P.floors[k-1]?P.floors[k-1].items.filter(isStair):[];
 function computeProblems(){
   PROB={}; const S=doorSectors(), holes=stairHoles(P.cur);
   P.items.forEach(it=>{
+    if(isElec(it)) return;
     const list=[]; const room=roomAt(it.x,it.y);
     if(room&&itemCorners(it,0.006).some(q=>!pip(q[0],q[1],room.pts))) list.push('ชนผนัง');
     if(S.some(s=>sectorHits(s,it))) list.push('ขวางประตู');
@@ -1068,7 +1102,7 @@ function computeStats(){
   STATS={};
   P.rooms.forEach(r=>{
     const A=Math.abs(area2(r.pts))/2, b=bboxPts(r.pts), st=0.05; let tot=0, free=0;
-    const its=P.items.filter(it=>!isFlat(it)&&(it.elev||0)<1.0).filter(it=>{ const e=ext(it); return it.x+e[0]/2>b.x0&&it.x-e[0]/2<b.x1&&it.y+e[1]/2>b.y0&&it.y-e[1]/2<b.y1; });
+    const its=P.items.filter(it=>!isFlat(it)&&!isElec(it)&&(it.elev||0)<1.0).filter(it=>{ const e=ext(it); return it.x+e[0]/2>b.x0&&it.x-e[0]/2<b.x1&&it.y+e[1]/2>b.y0&&it.y-e[1]/2<b.y1; });
     const shs=P.shapes.filter(s=>s.elev<1.0);
     for(let y=b.y0+st/2;y<b.y1;y+=st) for(let x=b.x0+st/2;x<b.x1;x+=st){ if(!pip(x,y,r.pts)) continue; tot++; if(!its.some(it=>inItem(it,x,y,0))&&!shs.some(s=>pip(x,y,s.pts))) free++; }
     STATS[r.id]={area:A,free:tot?A*free/tot:A};
@@ -1088,6 +1122,19 @@ function restore(s){ const o=JSON.parse(s); Object.assign(P,{name:o.name,wallH:o
 function undo(){ if(!HIST.u.length) return; HIST.r.push(HIST.cur); HIST.cur=HIST.u.pop(); restore(HIST.cur); updUndo(); }
 function redo(){ if(!HIST.r.length) return; HIST.u.push(HIST.cur); HIST.cur=HIST.r.pop(); restore(HIST.cur); updUndo(); }
 function refreshAfter(){ computeProblems(); computeStats(); need2=true; sync3d(); }
+
+/* ---------------- ไฟฟ้า ---------------- */
+/* จุดของสายที่อยู่บนของไฟฟ้า: สายลงจากฝ้าไปที่กลางของ (ปลายสายลง 1 เส้น จุดกลางสายลงแล้วขึ้น 2 เส้น) */
+const CEIL_GAP=0.03;
+function wireAt(fl,q){ return fl.items.find(it=>(isElec(it)||isLight(it))&&inItem(it,q[0],q[1],0.06)); }
+function wireDrops(w,fl){ const yc=P.wallH-CEIL_GAP; return w.pts.map((q,i)=>{ const it=wireAt(fl,q); if(!it) return null; return {y:Math.min(yc,(it.elev||0)+itemH(it)*0.5),n:(i===0||i===w.pts.length-1)?1:2}; }); }
+const planLen=pts=>pts.reduce((s,q,i)=>i?s+Math.hypot(q[0]-pts[i-1][0],q[1]-pts[i-1][1]):0,0);
+function wireLen(w,fl){ const yc=P.wallH-CEIL_GAP; return planLen(w.pts)+wireDrops(w,fl).reduce((s,d)=>s+(d?(yc-d.y)*d.n:0),0); }
+function elecStats(){
+  const n={plug:0,switch:0,light:0,panel:0,other:0}, len={light:0,plug:0,other:0};
+  P.floors.forEach(f=>{ f.items.forEach(it=>{ const c=C[it.type]; if(c.light) n.light++; else if(c.elec) n[c.elec]++; }); f.wires.forEach(w=>{ len[w.c]+=wireLen(w,f); }); });
+  return {n,len,tot:len.light+len.plug+len.other};
+}
 function live(){ need2=true; sync3d(); }
 
 /* ---------------- ลายพื้น ---------------- */
@@ -1259,6 +1306,9 @@ function draw2d(){
     if(SEL&&SEL.kind==='item'&&SEL.id===it.id){ c.strokeStyle=TK.accent; c.lineWidth=2.2; c.strokeRect(-w/2-3,-d/2-3,w+6,d+6); }
     c.restore();
   });
+  /* สายไฟ + สัญลักษณ์ไฟฟ้า */
+  if(UI.wires) drawWires();
+  list.forEach(it=>{ const k=C[it.type]; if(k.elec){ const Q=w2s(it.x,it.y); elecSym(Q[0],Q[1],k.light?'light':k.elec); } });
   /* ชื่อห้อง + ความยาวผนัง */
   const placed=[], FONT_ROOM='600 13px "Bai Jamjuree",sans-serif';
   const fits=(t,font,w)=>{ c.font=font; return c.measureText(t).width<=w; };
@@ -1300,11 +1350,34 @@ function draw2d(){
     c.strokeStyle=TK.accent; c.lineWidth=2.2; c.beginPath(); pts.forEach((q,i)=>{ const Q=w2s(q[0],q[1]); i?c.lineTo(Q[0],Q[1]):c.moveTo(Q[0],Q[1]); }); c.stroke();
     D.pts.forEach((q,i)=>{ const Q=w2s(q[0],q[1]); c.beginPath(); c.arc(Q[0],Q[1],i===0&&D.pts.length>=3?8:5,0,Math.PI*2); c.fillStyle=i===0?TK.accent:TK.surface; c.fill(); c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); });
     for(let i=1;i<pts.length;i++){ const a=pts[i-1], b=pts[i], L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L*s<30) continue; const M=w2s((a[0]+b[0])/2,(a[1]+b[1])/2); pill(String(cm(L)),M[0],M[1]-14,TK.accent,TK.accentInk); }
-    c.setLineDash([3,4]); c.strokeStyle=TK.accent; c.lineWidth=1; D.guides.forEach(gd=>{ const Q=w2s(gd[0],gd[1]), H=w2s(D.hover[0],D.hover[1]); c.beginPath(); c.moveTo(Q[0],Q[1]); c.lineTo(H[0],H[1]); c.stroke(); }); c.setLineDash([]);
+    c.setLineDash([3,4]); c.strokeStyle=TK.accent; c.lineWidth=1; if(D.hover) D.guides.forEach(gd=>{ const Q=w2s(gd[0],gd[1]), H=w2s(D.hover[0],D.hover[1]); c.beginPath(); c.moveTo(Q[0],Q[1]); c.lineTo(H[0],H[1]); c.stroke(); }); c.setLineDash([]);
   }
   if((TOOL==='rect'||TOOL==='shape')&&P2.g&&P2.g.type==='rect'&&P2.g.p1){ const a=P2.g.p0, b=P2.g.p1; const x0=Math.min(a[0],b[0]), y0=Math.min(a[1],b[1]), x1=Math.max(a[0],b[0]), y1=Math.max(a[1],b[1]); pathPoly(rectPts(x0,y0,x1-x0,y1-y0)); c.fillStyle=TK.accentSoft; c.fill(); c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); const M=w2s((x0+x1)/2,(y0+y1)/2); pill(cm(x1-x0)+' × '+cm(y1-y0),M[0],M[1],TK.accent,TK.accentInk); }
   if((TOOL==='door'||TOOL==='window')&&HOV){ const e=edgeOf(HOV.room,HOV.i), w=TOOL==='door'?0.8:1.0, t=clamp(HOV.t,w/2,Math.max(w/2,e.len-w/2)); const ax=e.a[0]+e.ux*(t-w/2), ay=e.a[1]+e.uy*(t-w/2), bx=e.a[0]+e.ux*(t+w/2), by=e.a[1]+e.uy*(t+w/2); pathPoly([[ax,ay],[bx,by],[bx+e.nx*P.wallT,by+e.ny*P.wallT],[ax+e.nx*P.wallT,ay+e.ny*P.wallT]]); c.fillStyle=TK.accent; c.fill(); }
   updScale();
+}
+
+function drawWires(){
+  const c=g2, sel=SEL&&SEL.kind==='wire'?SEL:null;
+  P.wires.forEach(wr=>{
+    const col=WIRE_KINDS[wr.c][1], on=!!sel&&sel.id===wr.id; c.save(); c.lineJoin='round'; c.lineCap='round';
+    c.beginPath(); wr.pts.forEach((q,i)=>{ const Q=w2s(q[0],q[1]); i?c.lineTo(Q[0],Q[1]):c.moveTo(Q[0],Q[1]); });
+    c.strokeStyle=on?TK.accent:TK.surface; c.lineWidth=on?7:5; c.stroke();
+    c.strokeStyle=col; c.lineWidth=on?3:2.2; c.setLineDash(wr.c==='light'?[9,5]:wr.c==='other'?[2,5]:[]); c.stroke(); c.setLineDash([]);
+    wr.pts.forEach((q,i)=>{ const Q=w2s(q[0],q[1]); c.beginPath(); c.arc(Q[0],Q[1],on?6:3,0,Math.PI*2); c.fillStyle=on?(sel.i===i?TK.accent:TK.surface):col; c.fill(); if(on){ c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); } });
+    if(on) for(let i=1;i<wr.pts.length;i++){ const a=wr.pts[i-1], b=wr.pts[i], L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L*V2.s<44) continue; const M=w2s((a[0]+b[0])/2,(a[1]+b[1])/2); pill(String(cm(L)),M[0],M[1]-13,TK.accent,TK.accentInk); }
+    c.restore();
+  });
+}
+/* สัญลักษณ์บนแปลน: ไฟ = วงกลมกากบาท · ปลั๊ก = สองขีด · สวิตช์ = S · ตู้ไฟ = กล่องสายฟ้า */
+function elecSym(X,Y,k){
+  const c=g2, col={plug:'#d6453d',switch:'#3f6fb5',light:'#e0a100',panel:'#2b2d31',other:'#6b7280'}[k]||'#6b7280';
+  c.save(); c.fillStyle='#ffffff'; c.strokeStyle=col; c.lineWidth=2; c.beginPath(); if(k==='panel') c.rect(X-8,Y-8,16,16); else c.arc(X,Y,8,0,Math.PI*2); c.fill(); c.stroke(); c.lineWidth=1.7; c.beginPath();
+  if(k==='light'){ c.moveTo(X-5,Y-5); c.lineTo(X+5,Y+5); c.moveTo(X+5,Y-5); c.lineTo(X-5,Y+5); c.stroke(); }
+  else if(k==='plug'){ c.moveTo(X-2.5,Y-4); c.lineTo(X-2.5,Y+4); c.moveTo(X+2.5,Y-4); c.lineTo(X+2.5,Y+4); c.stroke(); }
+  else if(k==='panel'){ c.fillStyle=col; c.moveTo(X+1,Y-6); c.lineTo(X-4,Y+1); c.lineTo(X,Y+1); c.lineTo(X-1,Y+6); c.lineTo(X+4,Y-1); c.lineTo(X,Y-1); c.closePath(); c.fill(); }
+  else { c.fillStyle=col; c.font='700 10px "Bai Jamjuree",sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(k==='switch'?'S':'F',X,Y+0.5); }
+  c.restore();
 }
 
 /* ---------------- จับนิ้ว/เมาส์บนแปลน ---------------- */
@@ -1313,7 +1386,14 @@ const D={pts:[],hover:null,guides:[]};
 function xy(e,el){ const r=el.getBoundingClientRect(); return [e.clientX-r.left,e.clientY-r.top]; }
 function blurField(){ const a=document.activeElement; if(a&&a!==document.body&&/INPUT/.test(a.tagName)) a.blur(); }
 function allVerts(skipRoom,skipIdx){ const v=[]; D.pts.forEach(q=>v.push(q)); P.rooms.concat(P.shapes).forEach(r=>r.pts.forEach((q,i)=>{ if(!(r===skipRoom&&i===skipIdx)) v.push(q); })); return v; }
-const isDraw=()=>TOOL==='room'||TOOL==='shape';
+const isDraw=()=>TOOL==='room'||TOOL==='shape'||TOOL==='wire';
+/* จุดที่สายไฟดูดเข้าหา: มุมห้อง กลางของไฟฟ้า และจุดของสายอื่น (ต่อแยกได้) */
+function wireVerts(sw,si){ const v=allVerts(); P.items.forEach(it=>{ if(isElec(it)||isLight(it)) v.push([it.x,it.y]); }); P.wires.forEach(w=>w.pts.forEach((q,i)=>{ if(!(w===sw&&i===si)) v.push(q); })); return v; }
+const drawVerts=()=>TOOL==='wire'?wireVerts():allVerts();
+function addWire(pts){
+  const wr={id:uid('w'),pts:pts.map(q=>[rd(q[0]),rd(q[1])]),c:UI.wireKind}; P.wires.push(wr); D.pts=[]; D.hover=null; D.guides=[]; updDrawBar(); commit();
+  toast('เพิ่มสาย'+WIRE_KINDS[wr.c][0]+' ยาว '+f2(wireLen(wr,curFloor()))+' ม. · ลากเส้นต่อได้เลย หรือกด "เลือก/ย้าย"');
+}
 function addShape(pts){
   pts=pts.map(q=>[rd(q[0]),rd(q[1])]); if(area2(pts)<0) pts.reverse();
   const s={id:uid('s'),name:'รูปทรง '+(P.shapes.length+1),pts,h:1.0,elev:0,color:SHAPE_COLORS[0],mat:'plain'};
@@ -1350,11 +1430,13 @@ function pick2(X,Y,w){
   const so=selObj();
   if(so&&SEL.kind==='item'){ const h=rotHandle(so); if(Math.hypot(X-h[0],Y-h[1])<15) return {kind:'rot',id:so.id}; }
   if(so&&SEL.kind==='shape') for(let i=0;i<so.pts.length;i++){ const Q=w2s(so.pts[i][0],so.pts[i][1]); if(Math.hypot(X-Q[0],Y-Q[1])<14) return {kind:'scorner',id:so.id,i}; }
+  if(so&&SEL.kind==='wire') for(let i=0;i<so.pts.length;i++){ const Q=w2s(so.pts[i][0],so.pts[i][1]); if(Math.hypot(X-Q[0],Y-Q[1])<13) return {kind:'wcorner',id:so.id,i}; }
   if(so&&SEL.kind==='room'){
     for(let i=0;i<so.pts.length;i++){ const Q=w2s(so.pts[i][0],so.pts[i][1]); if(Math.hypot(X-Q[0],Y-Q[1])<14) return {kind:'corner',room:so.id,i}; }
     for(let i=0;i<so.pts.length;i++){ const e=edgeOf(so,i); if(e.len*V2.s<40) continue; const M=w2s((e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2); if(Math.hypot(X-M[0],Y-M[1])<14) return {kind:'edge',room:so.id,i}; }
   }
   const o=hitOpening(w[0],w[1],8/V2.s); if(o) return {kind:'open',id:o.id};
+  if(UI.wires&&!P.items.some(it=>isElec(it)&&inItem(it,w[0],w[1],Math.max(0,(20/V2.s-Math.min(it.w,it.d))/2)))) for(let i=P.wires.length-1;i>=0;i--){ const wr=P.wires[i]; for(let j=1;j<wr.pts.length;j++){ const a=wr.pts[j-1], b=wr.pts[j]; if(segProj(w[0],w[1],a[0],a[1],b[0],b[1]).d*V2.s<7) return {kind:'wire',id:wr.id}; } }
   const list=drawOrder(); for(let i=list.length-1;i>=0;i--){ const it=list[i]; const pad=Math.max(0,(24/V2.s-Math.min(it.w,it.d))/2); if(inItem(it,w[0],w[1],pad)) return {kind:'item',id:it.id}; }
   for(let i=P.shapes.length-1;i>=0;i--) if(pip(w[0],w[1],P.shapes[i].pts)) return {kind:'shape',id:P.shapes[i].id};
   const r=roomAtWall(w[0],w[1])||roomAt(w[0],w[1]); if(r) return {kind:'room',id:r.id};
@@ -1381,7 +1463,7 @@ cv2.addEventListener('pointermove',e=>{
 });
 function hover2(p){
   const w=s2w(p[0],p[1]);
-  if(isDraw()){ const sp=snapPoint(w[0],w[1],D.pts[D.pts.length-1],allVerts()); D.hover=[sp.x,sp.y]; D.guides=sp.guides; need2=true; }
+  if(isDraw()){ const sp=snapPoint(w[0],w[1],D.pts[D.pts.length-1],drawVerts()); D.hover=[sp.x,sp.y]; D.guides=sp.guides; need2=true; }
   else if(TOOL==='door'||TOOL==='window'){ HOV=nearestWall(w[0],w[1],0.8); need2=true; }
   else if(TOOL==='select'){ const h=pick2(p[0],p[1],w); cv2.style.cursor=!h?'grab':(h.kind==='rot'?'crosshair':(h.kind==='room'&&!(SEL&&SEL.kind==='room'&&SEL.id===h.id))?'pointer':'move'); }
 }
@@ -1392,11 +1474,13 @@ function startDrag2(g){
   if(TOOL!=='select'||!h){ g.type='pan'; return; }
   if(h.kind==='rot'){ g.type='rot'; g.id=h.id; return; }
   if(h.kind==='scorner'){ g.type='scorner'; g.id=h.id; g.i=h.i; return; }
+  if(h.kind==='wcorner'){ g.type='wcorner'; g.id=h.id; g.i=h.i; SEL.i=h.i; return; }
+  if(h.kind==='wire'){ g.type='wmove'; g.id=h.id; g.pts0=deep(getWire(h.id).pts); if(!(SEL&&SEL.id===h.id)) select({kind:'wire',id:h.id}); return; }
   if(h.kind==='shape'){ g.type='smove'; g.id=h.id; g.pts0=deep(getShape(h.id).pts); if(!(SEL&&SEL.id===h.id)) select({kind:'shape',id:h.id}); return; }
   if(h.kind==='corner'){ g.type='corner'; g.room=h.room; g.i=h.i; SEL.corner=h.i; SEL.wall=null; return; }
   if(h.kind==='edge'){ const r=getRoom(h.room), e=edgeOf(r,h.i); g.type='edge'; g.room=h.room; g.i=h.i; g.nx=e.nx; g.ny=e.ny; g.a0=r.pts[h.i].slice(); g.b0=r.pts[(h.i+1)%r.pts.length].slice(); return; }
   if(h.kind==='open'){ g.type='open'; g.id=h.id; if(!(SEL&&SEL.id===h.id)) select({kind:'open',id:h.id}); return; }
-  if(h.kind==='item'){ const it=getItem(h.id); g.type='item'; g.id=h.id; g.ix=it.x; g.iy=it.y; if(!(SEL&&SEL.id===h.id)) select({kind:'item',id:h.id}); return; }
+  if(h.kind==='item'){ const it=getItem(h.id); g.type='item'; g.id=h.id; g.ix=it.x; g.iy=it.y; g.wv=[]; if(isElec(it)||isLight(it)) P.wires.forEach(wr=>wr.pts.forEach((q,i)=>{ if(Math.hypot(q[0]-it.x,q[1]-it.y)<0.02) g.wv.push([wr,i]); })); if(!(SEL&&SEL.id===h.id)) select({kind:'item',id:h.id}); return; }
   if(h.kind==='room'&&SEL&&SEL.kind==='room'&&SEL.id===h.id){ const r=getRoom(h.id); g.type='room'; g.id=h.id; g.pts0=deep(r.pts); g.items=P.items.filter(it=>pip(it.x,it.y,r.pts)).map(it=>({id:it.id,x:it.x,y:it.y})); return; }
   g.type='pan';
 }
@@ -1404,7 +1488,7 @@ function moveDrag2(g,p,e){
   const w=s2w(p[0],p[1]);
   switch(g.type){
     case 'pan': V2.ox+=p[0]-g.lx; V2.oy+=p[1]-g.ly; need2=true; break;
-    case 'item': { const it=getItem(g.id); if(!it) break; it.x=g.ix+(w[0]-g.w0[0]); it.y=g.iy+(w[1]-g.w0[1]); if(!e.altKey) snapItem(it); g.moved=true; live(); break; }
+    case 'item': { const it=getItem(g.id); if(!it) break; it.x=g.ix+(w[0]-g.w0[0]); it.y=g.iy+(w[1]-g.w0[1]); if(!e.altKey) snapItem(it); (g.wv||[]).forEach(([wr,i])=>{ wr.pts[i]=[it.x,it.y]; }); g.moved=true; live(); break; }
     case 'rot': { const it=getItem(g.id); if(!it) break; const c=w2s(it.x,it.y); let a=Math.atan2(p[1]-c[1],p[0]-c[0])*180/Math.PI+90; a=e.shiftKey?Math.round(a):Math.round(a/15)*15; it.rot=((a%360)+360)%360; g.moved=true; live(); break; }
     case 'corner': { const r=getRoom(g.room); if(!r) break; const prev=r.pts[(g.i-1+r.pts.length)%r.pts.length]; const sp=snapPoint(w[0],w[1],null,allVerts(r,g.i)); if(Math.abs(sp.x-prev[0])<10/V2.s) sp.x=prev[0]; if(Math.abs(sp.y-prev[1])<10/V2.s) sp.y=prev[1]; r.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
     case 'edge': { const r=getRoom(g.room); if(!r) break; const dd=snapv((w[0]-g.w0[0])*g.nx+(w[1]-g.w0[1])*g.ny,0.05); const j=(g.i+1)%r.pts.length; r.pts[g.i]=[rd(g.a0[0]+g.nx*dd),rd(g.a0[1]+g.ny*dd)]; r.pts[j]=[rd(g.b0[0]+g.nx*dd),rd(g.b0[1]+g.ny*dd)]; g.moved=true; live(); break; }
@@ -1413,6 +1497,8 @@ function moveDrag2(g,p,e){
     case 'rect': { const s=snapPoint(w[0],w[1],null,allVerts()); g.p1=[s.x,s.y]; need2=true; break; }
     case 'scorner': { const sh=getShape(g.id); if(!sh) break; const sp=snapPoint(w[0],w[1],null,allVerts(sh,g.i)); sh.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
     case 'smove': { const sh=getShape(g.id); if(!sh) break; const dx=snapv(w[0]-g.w0[0],0.01), dy=snapv(w[1]-g.w0[1],0.01); sh.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.moved=true; live(); break; }
+    case 'wcorner': { const wr=getWire(g.id); if(!wr) break; const sp=snapPoint(w[0],w[1],null,wireVerts(wr,g.i)); wr.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
+    case 'wmove': { const wr=getWire(g.id); if(!wr) break; const dx=snapv(w[0]-g.w0[0],0.05), dy=snapv(w[1]-g.w0[1],0.05); wr.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.moved=true; live(); break; }
   }
   g.lx=p[0]; g.ly=p[1];
 }
@@ -1430,7 +1516,7 @@ function up2(e){
 }
 cv2.addEventListener('pointerup',up2); cv2.addEventListener('pointercancel',up2);
 cv2.addEventListener('pointerleave',()=>{ if(!P2.g&&(D.hover||HOV)){ HOV=null; need2=true; } });
-cv2.addEventListener('dblclick',()=>{ if(isDraw()&&D.pts.length>=3) finishDraw(); });
+cv2.addEventListener('dblclick',()=>{ if(isDraw()&&D.pts.length>=(TOOL==='wire'?2:3)) finishDraw(); });
 cv2.addEventListener('wheel',e=>{ e.preventDefault(); const p=xy(e,cv2); zoom2(Math.exp(-e.deltaY*(e.deltaMode===1?0.05:0.0015)),p[0],p[1]); },{passive:false});
 function tap2(g){
   const w=g.w0;
@@ -1444,13 +1530,15 @@ function tap2(g){
   if(h.kind==='corner'){ select({kind:'room',id:h.room,corner:h.i}); return; }
   if(h.kind==='edge'){ select({kind:'room',id:h.room,wall:h.i}); return; }
   if(h.kind==='scorner'){ select({kind:'shape',id:h.id}); return; }
+  if(h.kind==='wcorner'){ select({kind:'wire',id:h.id,i:h.i}); return; }
   select({kind:h.kind,id:h.id});
 }
 
 /* ---------------- วาดห้องเอง ---------------- */
 function drawAdd(w){
-  const last=D.pts[D.pts.length-1]; const sp=snapPoint(w[0],w[1],last,allVerts()); const p=[sp.x,sp.y];
-  if(D.pts.length>=3){ const f=D.pts[0]; if(Math.hypot((p[0]-f[0])*V2.s,(p[1]-f[1])*V2.s)<16){ finishDraw(); return; } }
+  const last=D.pts[D.pts.length-1]; const sp=snapPoint(w[0],w[1],last,drawVerts()); const p=[sp.x,sp.y];
+  if(TOOL==='wire'){ if(D.pts.length>=2&&Math.hypot((p[0]-last[0])*V2.s,(p[1]-last[1])*V2.s)<16){ finishDraw(); return; } }
+  else if(D.pts.length>=3){ const f=D.pts[0]; if(Math.hypot((p[0]-f[0])*V2.s,(p[1]-f[1])*V2.s)<16){ finishDraw(); return; } }
   if(last&&Math.abs(last[0]-p[0])<1e-6&&Math.abs(last[1]-p[1])<1e-6) return;
   D.pts.push(p); D.hover=null; D.guides=[]; updDrawBar(); need2=true;
 }
@@ -1465,6 +1553,7 @@ function drawTyped(){
 }
 function finishDraw(){
   const pts=[]; D.pts.forEach(q=>{ const l=pts[pts.length-1]; if(!l||Math.hypot(l[0]-q[0],l[1]-q[1])>1e-4) pts.push(q); });
+  if(TOOL==='wire'){ if(pts.length<2){ toast('แตะอย่างน้อย 2 จุด'); return; } addWire(pts); return; }
   if(pts.length>1){ const f=pts[0], l=pts[pts.length-1]; if(Math.hypot(f[0]-l[0],f[1]-l[1])<1e-4) pts.pop(); }
   if(pts.length<3){ toast('ต้องมีอย่างน้อย 3 มุม'); return; }
   if(TOOL==='shape'){ if(Math.abs(area2(pts))/2<0.002){ toast('รูปทรงเล็กเกินไป'); return; } addShape(pts); return; }
@@ -1472,7 +1561,12 @@ function finishDraw(){
   if(area2(pts)<0) pts.reverse();
   const r=newRoom(pts); P.rooms.push(r); D.pts=[]; D.hover=null; setTool('select'); select({kind:'room',id:r.id}); commit(); toast('เพิ่ม '+r.name+' แล้ว');
 }
-function updDrawBar(){ const n=D.pts.length, sh=TOOL==='shape'; $('dbTxt').textContent=n?('วางแล้ว '+n+' มุม'+(n>=3?(sh?' · แตะมุมแรกเพื่อปิดรูปทรง':' · แตะมุมแรกเพื่อปิดห้อง'):'')):(sh?'แตะวางมุมของรูปทรง หรือลากเป็นสี่เหลี่ยม':'แตะบนแปลนเพื่อวางมุมแรก'); $('dbUndo').disabled=!n; $('dbClose').disabled=n<3; }
+function updDrawBar(){
+  const n=D.pts.length, wi=TOOL==='wire', kb=$('dbKinds'); kb.hidden=!wi; $('dbClose').textContent=wi?'จบสาย':'ปิดห้อง';
+  if(wi){ kb.innerHTML=Object.keys(WIRE_KINDS).map(k=>`<button type="button" data-wk="${k}" aria-pressed="${UI.wireKind===k}">${WIRE_KINDS[k][0]}</button>`).join(''); $('dbTxt').textContent=n?('วางแล้ว '+n+' จุด'+(n>=2?' · แตะจุดสุดท้ายซ้ำเพื่อจบสาย':'')):'แตะทีละจุด เริ่มจากตู้ไฟหรือสวิตช์'; $('dbUndo').disabled=!n; $('dbClose').disabled=n<2; return; }
+  updDrawBarRoom(n);
+}
+function updDrawBarRoom(n){ const sh=TOOL==='shape'; $('dbTxt').textContent=n?('วางแล้ว '+n+' มุม'+(n>=3?(sh?' · แตะมุมแรกเพื่อปิดรูปทรง':' · แตะมุมแรกเพื่อปิดห้อง'):'')):(sh?'แตะวางมุมของรูปทรง หรือลากเป็นสี่เหลี่ยม':'แตะบนแปลนเพื่อวางมุมแรก'); $('dbUndo').disabled=!n; $('dbClose').disabled=n<3; }
 function addRectRoom(x0,y0,w,d){ const r=newRoom(rectPts(snapv(x0,0.05),snapv(y0,0.05),rd(w),rd(d))); P.rooms.push(r); setTool('select'); select({kind:'room',id:r.id}); commit(); toast('เพิ่ม '+r.name+' แล้ว · '+cm(w)+'×'+cm(d)+' ซม.'); }
 function placeOpening(kind,w){
   const nw=nearestWall(w[0],w[1],0.8); if(!nw){ toast('แตะใกล้ผนังห้อง'); return; }
@@ -1496,16 +1590,32 @@ function init3d(){
   if(!r||!r.getContext()) return;
   R3.renderer=r; r.setPixelRatio(Math.min(window.devicePixelRatio||1,isWide()?2:1.5)); r.shadowMap.enabled=true; r.shadowMap.type=T.PCFSoftShadowMap;
   const sc=new T.Scene(); R3.scene=sc; R3.cam=new T.PerspectiveCamera(50,1,0.05,300);
-  sc.add(new T.HemisphereLight(0xffffff,0xb9a98f,0.82));
+  R3.hemi=new T.HemisphereLight(0xffffff,0xb9a98f,0.82); sc.add(R3.hemi);
   const sun=new T.DirectionalLight(0xffffff,0.72); sun.castShadow=true; const ms=isWide()?2048:1024; sun.shadow.mapSize.set(ms,ms); sun.shadow.bias=-0.0005; sun.shadow.normalBias=0.02; sc.add(sun); sc.add(sun.target); R3.sun=sun;
   R3.groundMat=new T.MeshBasicMaterial({color:TK.ground}); const gr=new T.Mesh(new T.PlaneGeometry(400,400),R3.groundMat); gr.rotation.x=-Math.PI/2; gr.position.y=-0.004; sc.add(gr);
-  R3.shell=new T.Group(); sc.add(R3.shell); R3.itemsRoot=new T.Group(); sc.add(R3.itemsRoot); R3.roof=new T.Group(); R3.roof.visible=UI.roof; sc.add(R3.roof); R3.shapesRoot=new T.Group(); sc.add(R3.shapesRoot);
+  R3.shell=new T.Group(); sc.add(R3.shell); R3.itemsRoot=new T.Group(); sc.add(R3.itemsRoot); R3.roof=new T.Group(); R3.roof.visible=UI.roof; sc.add(R3.roof); R3.shapesRoot=new T.Group(); sc.add(R3.shapesRoot); R3.wiresRoot=new T.Group(); sc.add(R3.wiresRoot); R3.lamps=new T.Group(); sc.add(R3.lamps);
   R3.selMat=new T.LineBasicMaterial({color:TK.accent}); R3.selBox=new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(1,1,1)),R3.selMat); R3.selBox.visible=false; sc.add(R3.selBox);
   R3.warnMat=new T.MeshBasicMaterial({color:TK.warn,transparent:true,opacity:0.35,depthWrite:false,side:T.DoubleSide});
   R3.rt=new T.WebGLRenderTarget(16,16); R3.tScene=new T.Scene(); R3.tScene.add(new T.HemisphereLight(0xffffff,0x8a8070,0.95)); const dl=new T.DirectionalLight(0xffffff,0.55); dl.position.set(0.6,3,1.2); R3.tScene.add(dl); R3.tCam=new T.OrthographicCamera(-1,1,1,-1,0.01,20);
   R3.ray=new T.Raycaster(); R3.ok=true; theme3d();
 }
-function theme3d(){ if(!R3.ok) return; R3.scene.background=new T.Color(TK.scene); R3.groundMat.color.set(TK.ground); R3.selMat.color.set(TK.accent); R3.warnMat.color.set(TK.warn); need3=true; }
+function theme3d(){ if(!R3.ok) return; R3.selMat.color.set(TK.accent); R3.warnMat.color.set(TK.warn); applyNight(); need3=true; }
+/* "เปิดไฟ": ฟ้ามืด แดดเกือบหมด หลอดไฟเรืองแสง และมีแสงจากหลอดที่ใกล้จุดที่มองอยู่ไม่เกิน 8 ดวง */
+function applyNight(){ const n=UI.night; R3.hemi.intensity=n?0.1:0.82; R3.sun.intensity=n?0.03:0.72; R3.scene.background=new T.Color(n?'#10151d':TK.scene); R3.groundMat.color.set(n?'#1a2029':TK.ground); GLOWS.forEach(m=>{ m.emissiveIntensity=n?1.4:0.35; }); }
+function syncLamps(force){
+  if(!R3.ok) return; const list=[];
+  if(UI.night) for(let k=0;k<=P.cur;k++){ const ey=elevOf(k); P.floors[k].items.forEach(it=>{ if(!isLight(it)) return; const c=C[it.type], ly=c.lightY==null?0.5:c.lightY; list.push([it.x,ey+(it.elev||0)+itemH(it)*ly-(ly===0?0.06:0),it.y]); }); }
+  list.sort((a,b)=>Math.hypot(a[0]-CAM.tx,a[2]-CAM.tz)-Math.hypot(b[0]-CAM.tx,b[2]-CAM.tz)); if(list.length>8) list.length=8;
+  const key=JSON.stringify(list.map(p=>p.map(v=>Math.round(v*100)))); if(!force&&key===R3.lkey) return; R3.lkey=key;
+  const g=R3.lamps; while(g.children.length) g.remove(g.children[0]);
+  list.forEach(p=>{ const l=new T.PointLight(0xffe2b8,1.5,4.5,2); l.position.set(p[0],p[1],p[2]); g.add(l); });
+}
+function setNight(on){
+  UI.night=on; $('lightBtn').setAttribute('aria-pressed',on?'true':'false');
+  if(!R3.ok) return; applyNight(); syncLamps(true); need3=true;
+  if(on&&UI.view==='2d') setView(isWide()?'split':'3d');
+  toast(on?(allOf(P,'items').some(isLight)?'เปิดไฟแล้ว ดูแบบตอนกลางคืน':'ยังไม่มีหลอดไฟ เพิ่มได้ที่ "เพิ่มของ" หมวดไฟฟ้า'):'ปิดไฟแล้ว');
+}
 function resize3d(){ if(!R3.ok) return; const r=$('pane3d').getBoundingClientRect(); if(r.width<2||r.height<2) return; W3=r.width; H3=r.height; R3.renderer.setSize(W3,H3,false); R3.cam.aspect=W3/H3; R3.cam.updateProjectionMatrix(); need3=true; }
 function disposeTree(o){ o.traverse(m=>{ if(m.geometry) m.geometry.dispose(); }); }
 function prism(q,y0,y1,mats){ const s=new T.Shape(q.map(p=>new T.Vector2(p[0],-p[1]))); const g=new T.ExtrudeGeometry(s,{depth:Math.max(0.001,y1-y0),bevelEnabled:false}); const m=new T.Mesh(g,mats); m.rotation.x=-Math.PI/2; m.position.y=y0; m.castShadow=true; m.receiveShadow=true; return m; }
@@ -1584,50 +1694,119 @@ function roofMat(c,kind){
   return TEX[k]=new T.MeshStandardMaterial({map:t,color:'#ffffff',roughness:kind==='metal'?0.45:0.72,metalness:kind==='metal'?0.35:0});
 }
 const topFloor=()=>P.floors[P.floors.length-1];
-const roofRooms=()=>topFloor().rooms.filter(r=>r.wallType!=='none');
-function roomsBox(){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; roofRooms().forEach(r=>r.pts.forEach((q,i)=>[q,outerPt(r,i,P.wallT)].forEach(p=>{ x0=Math.min(x0,p[0]); x1=Math.max(x1,p[0]); y0=Math.min(y0,p[1]); y1=Math.max(y1,p[1]); }))); return {x0,y0,x1,y1}; }
-function roofAlong(){ const rf=roofOf(P); if(rf.axis!=='auto') return rf.axis; const b=roomsBox(); return (b.x1-b.x0)>=(b.y1-b.y0)?'x':'y'; }
-/* หลังคาจั่วคลุมกรอบนอกของทุกห้อง สันหลังคาวิ่งตามด้านยาว (สลับได้) */
+const roofRooms=()=>topFloor().rooms.filter(r=>r.wallType!=='none'&&!(roofOf(P).mode==='room'&&r.roof==='none'));
+function roomsBox(rooms){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; (rooms||roofRooms()).forEach(r=>r.pts.forEach((q,i)=>[q,outerPt(r,i,P.wallT)].forEach(p=>{ x0=Math.min(x0,p[0]); x1=Math.max(x1,p[0]); y0=Math.min(y0,p[1]); y1=Math.max(y1,p[1]); }))); return {x0,y0,x1,y1}; }
+function roofAlong(b){ const rf=roofOf(P); if(rf.axis!=='auto') return rf.axis; b=b||roomsBox(); return (b.x1-b.x0)>=(b.y1-b.y0)?'x':'y'; }
+/* คานไม้ระหว่างสองจุด (กล่องยาว w กว้าง h สูง) */
+function beam3(g,p,q,w,h,color){
+  const d=new T.Vector3().subVectors(q,p), L=d.length(); if(L<0.01) return null;
+  const m=sh(new T.Mesh(new T.BoxGeometry(L,h,w),mat(color,{roughness:0.85}))); m.position.copy(p).add(q).multiplyScalar(0.5);
+  const xa=d.normalize(), up=Math.abs(xa.y)>0.99?new T.Vector3(1,0,0):new T.Vector3(0,1,0), za=new T.Vector3().crossVectors(xa,up).normalize(), ya=new T.Vector3().crossVectors(za,xa);
+  m.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(xa,ya,za)); g.add(m); return m;
+}
+/* ท่อกลมระหว่างสองจุด (สายไฟ ท่อน้ำลง) */
+function rod(g,p,q,r,m){ const d=new T.Vector3().subVectors(q,p), L=d.length(); if(L<0.005) return null; const o=new T.Mesh(new T.CylinderGeometry(r,r,L,8),m); o.position.copy(p).add(q).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize()); g.add(o); return o; }
+/* ตัดรูปหลายเหลี่ยม (a,c) ให้เหลือฝั่ง a<=0 (s=-1) หรือ a>=0 (s=1) ใช้กับหลังคา "ไม้+ตาข่าย" */
+function clipA(poly,s){ const out=[]; for(let i=0;i<poly.length;i++){ const p=poly[i], q=poly[(i+1)%poly.length], ip=s*p[0]>=-1e-9, iq=s*q[0]>=-1e-9; if(ip) out.push(p); if(ip!==iq){ const t=p[0]/(p[0]-q[0]); out.push([0,p[1]+(q[1]-p[1])*t]); } } return out; }
+const dedupe=q=>q.filter((p,i)=>{ const n=q[(i+1)%q.length]; return Math.hypot(p[0]-n[0],p[1]-n[1])>1e-6; });
+/* หลังคาทั้งหลัง (หรือแยกทีละห้อง) */
 function buildRoof(){
   const g=R3.roof; disposeTree(g); while(g.children.length) g.remove(g.children[0]);
   g.position.y=elevOf(P.floors.length-1); g.visible=roofShown();
-  const rooms=roofRooms(); if(!rooms.length) return;
-  const rf=roofOf(P), TT=P.wallT, H=P.wallH, o=0.45, pr=rf.pitch*Math.PI/180, tn=Math.tan(pr);
-  const {x0,y0,x1,y1}=roomsBox(), along=roofAlong(), ax=along==='x', cx=(x0+x1)/2, cz=(y0+y1)/2, L=ax?x1-x0:y1-y0, hw=(ax?y1-y0:x1-x0)/2;
+  const rooms=roofRooms(); if(!rooms.length) return; const rf=roofOf(P);
+  if(rf.mode==='room') rooms.forEach(r=>roofOver(g,[r],r.roof||rf.style||'gable'));
+  else roofOver(g,rooms,rf.style||'gable');
+}
+/* หลังคาหนึ่งผืนคลุมกรอบนอกของห้องที่ให้มา: พิกัด a ตามแนวสัน c ขวางสัน (0 = กลาง) · จั่ว ปั้นหยา เพิงหมาแหงน หรือแบน */
+function roofOver(g,rooms,style){
+  const rf=roofOf(P), TT=P.wallT, H=P.wallH, o=rf.over==null?0.45:rf.over, b=roomsBox(rooms), wood=FRAME;
+  const flat=style==='flat', hip=style==='hip', shed=style==='shed', gable=style==='gable';
+  const ax=hip?(b.x1-b.x0)>=(b.y1-b.y0):roofAlong(b)==='x', cx=(b.x0+b.x1)/2, cz=(b.y0+b.y1)/2, Lh=(ax?b.x1-b.x0:b.y1-b.y0)/2, hw=(ax?b.y1-b.y0:b.x1-b.x0)/2;
+  const deg=flat?0:shed?rf.pitch/2:rf.pitch, pr=deg*Math.PI/180, tn=Math.tan(pr), cs=Math.cos(pr);
   const W=(a,c,y)=>ax?new T.Vector3(cx+a,y,cz+c):new T.Vector3(cx+c,y,cz+a);
-  const Yr=H+hw*tn, Ye=H-o*tn, A=L/2+o, S=(hw+o)/Math.cos(pr), wood=FRAME;
-  /* ผืนหลังคาเป็นช่วง ๆ ตามแนวสัน: แบบ "ไม้+ตาข่าย" ครึ่งหลังเป็นไม้ ครึ่งหน้าเป็นตาข่าย */
-  const segs=rf.mat==='mix'?[[-A,0,'wood'],[0,A,'mesh']]:[[-A,A,rf.mat||'tile']];
-  segs.forEach(([a0,a1,kind])=>{
-    const pos=[], uv=[];
-    [-1,1].forEach(s=>{
-      const R1=W(a0,0,Yr), R2=W(a1,0,Yr), E2=W(a1,s*(hw+o),Ye), E1=W(a0,s*(hw+o),Ye);
-      let tri=[[R1,[a0,0]],[R2,[a1,0]],[E2,[a1,-S]],[R1,[a0,0]],[E2,[a1,-S]],[E1,[a0,-S]]];
-      const n=new T.Vector3().subVectors(R2,R1).cross(new T.Vector3().subVectors(E2,R1));
-      if(n.y<0) tri=[[R1,[a0,0]],[E2,[a1,-S]],[R2,[a1,0]],[R1,[a0,0]],[E1,[a0,-S]],[E2,[a1,-S]]];
-      tri.forEach(t=>{ pos.push(t[0].x,t[0].y,t[0].z); uv.push(t[1][0]*(kind==='mesh'?5:1),t[1][1]*(kind==='mesh'?5:1)); });
+  const A=Lh+o, B=hw+o, Ye=H-o*tn, fl=rf.flip?-1:1, r=hip?Math.max(0,Lh-hw):0;
+  const kinds=rf.mat==='mix'?[[-1,'wood'],[1,'mesh']]:[[0,rf.mat||'tile']], anySee=kinds.some(k=>SEE(k[1]));
+  const FT=0.16, Yr=shed?H+2*hw*tn:H+hw*tn;
+  const Y=(a,c)=>flat?H+(anySee?0.02:FT):shed?H+(hw-fl*c)*tn:hip?Yr-Math.max(Math.abs(c),Math.abs(a)-r)*tn:Yr-Math.abs(c)*tn;
+  const view=UI.roofView||'skin', skin=view!=='frame', frame=view!=='skin'||anySee;
+  /* ผิวหลังคา */
+  const planes=[];
+  if(flat) planes.push({poly:[[-A,-B],[A,-B],[A,B],[-A,B]],uv:(a,c)=>[a,c]});
+  else if(shed) planes.push({poly:[[-A,-B],[A,-B],[A,B],[-A,B]],uv:(a,c)=>[a,fl*c/cs]});
+  else if(hip) [-1,1].forEach(s=>{ planes.push({poly:[[-r,0],[r,0],[A,s*B],[-A,s*B]],uv:(a,c)=>[a,-Math.abs(c)/cs]}); planes.push({poly:[[s*r,0],[s*A,-B],[s*A,B]],uv:(a,c)=>[c,-(Math.abs(a)-r)/cs]}); });
+  else [-1,1].forEach(s=>planes.push({poly:[[-A,0],[A,0],[A,s*B],[-A,s*B]],uv:(a,c)=>[a,-Math.abs(c)/cs]}));
+  if(skin) kinds.forEach(([side,kind])=>{
+    const pos=[], uv=[], sc=SEE(kind)?5:1;
+    planes.forEach(pl=>{
+      const q=dedupe(side?clipA(pl.poly,side):pl.poly); if(q.length<3) return;
+      const V=q.map(p=>W(p[0],p[1],Y(p[0],p[1]))), U=q.map(p=>pl.uv(p[0],p[1]));
+      let ny=0; for(let i=0;i<V.length;i++){ const p=V[i], n=V[(i+1)%V.length]; ny+=(p.z-n.z)*(p.x+n.x); }
+      for(let i=1;i<q.length-1;i++) (ny<0?[0,i+1,i]:[0,i,i+1]).forEach(j=>{ pos.push(V[j].x,V[j].y,V[j].z); uv.push(U[j][0]*sc,U[j][1]*sc); });
     });
+    if(!pos.length) return;
     const geo=new T.BufferGeometry(); geo.setAttribute('position',new T.Float32BufferAttribute(pos,3)); geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2)); geo.computeVertexNormals();
-    if(SEE(kind)){
-      const m=new T.Mesh(geo,seeMat(kind,1,1)); g.add(m);
-      for(let a=a0;a<=a1+1e-6;a+=Math.max(0.3,(a1-a0)/Math.max(1,Math.round((a1-a0)/0.7)))){
-        [-1,1].forEach(s=>{ const mid=W(a,s*(hw+o)/2,(Yr+Ye)/2); const r=addBox(g,ax?0.05:S,0.07,ax?S:0.05,wood,0,0,0); r.position.copy(mid); r.position.y-=0.04; if(ax) r.rotation.x=s*pr; else r.rotation.z=-s*pr; });
+    if(SEE(kind)){ g.add(new T.Mesh(geo,seeMat(kind,1,1))); return; }
+    const top=new T.Mesh(geo,roofMat(rf.color,kind)); top.castShadow=true; top.receiveShadow=true; g.add(top);
+    if(!flat){ const under=new T.Mesh(geo,mat('#cdb497',{side:T.BackSide,roughness:0.9})); under.position.y=-0.05; under.receiveShadow=true; g.add(under); }
+  });
+  if(skin&&flat&&!anySee) addBox(g,ax?2*A:2*B,FT-0.005,ax?2*B:2*A,'#d9d4ca',cx,H,cz);
+  /* ครอบสัน ไม้เชิงชาย รางน้ำ */
+  const cap=rf.mat==='tile'?shade(rf.color,-0.18):shade(wood,-0.15), fas=rf.mat==='tile'||rf.mat==='metal'?'#efe9df':wood;
+  const eaves=flat?[]:shed?[[-A,fl*B,A,fl*B]]:hip?[[-A,-B,A,-B],[-A,B,A,B],[-A,-B,-A,B],[A,-B,A,B]]:[[-A,-B,A,-B],[-A,B,A,B]];
+  if(skin&&!anySee){
+    if(gable) beam3(g,W(-A,0,Yr+0.02),W(A,0,Yr+0.02),0.2,0.09,cap);
+    if(hip){ if(r>0.01) beam3(g,W(-r,0,Yr+0.02),W(r,0,Yr+0.02),0.2,0.09,cap); [-1,1].forEach(e=>[-1,1].forEach(s=>beam3(g,W(e*r,0,Yr+0.02),W(e*A,s*B,Ye+0.02),0.18,0.08,cap))); }
+    eaves.forEach(([a0,c0,a1,c1])=>beam3(g,W(a0,c0,Ye-0.06),W(a1,c1,Ye-0.06),0.03,0.14,fas));
+    if(shed) beam3(g,W(-A,-fl*B,Y(0,-fl*B)-0.06),W(A,-fl*B,Y(0,-fl*B)-0.06),0.03,0.14,fas);
+  }
+  if(skin&&rf.gutter&&!flat){
+    const gc='#e9e7e2', gm=mat('#dedcd6',{roughness:0.6}), down=-g.position.y;
+    eaves.forEach(([a0,c0,a1,c1])=>{ const out=(a0===a1)?[Math.sign(a0)*0.07,0]:[0,Math.sign(c0)*0.07]; beam3(g,W(a0+out[0],c0+out[1],Ye-0.1),W(a1+out[0],c1+out[1],Ye-0.1),0.12,0.1,gc); });
+    eaves.filter(e=>e[0]!==e[2]).forEach(([a0,c0])=>{ const s=Math.sign(c0), cOut=s*(B+0.07), cWall=s*(hw+0.05);
+      [-1,1].forEach(e=>{ const a=e*Math.max(0,Lh-0.15), y1=Ye-0.35;
+        rod(g,W(a,cOut,Ye-0.12),W(a,cOut,y1),0.035,gm); rod(g,W(a,cOut,y1),W(a,cWall,y1-Math.abs(cOut-cWall)*0.3),0.035,gm); rod(g,W(a,cWall,y1-Math.abs(cOut-cWall)*0.3),W(a,cWall,down),0.035,gm); }); });
+  }
+  /* โครงหลังคา: จันทัน แป อกไก่ ขื่อ ดั้ง อเส (ใต้ผิว) */
+  if(frame){
+    const steps=(lo,hi,sp)=>{ const n=Math.max(1,Math.round((hi-lo)/sp)), out=[]; for(let i=0;i<=n;i++) out.push(lo+(hi-lo)*i/n); return out; }, pc=shade(wood,-0.1);
+    const R=(a,c)=>Y(a,c)-0.15, Pu=(a,c)=>Y(a,c)-0.08;
+    if(flat){ const jy=anySee?H-0.04:H-0.06; steps(-A+0.05,A-0.05,0.6).forEach(a=>beam3(g,W(a,-B,jy),W(a,B,jy),0.05,0.12,wood)); }
+    else {
+      const al=steps(-A+0.04,A-0.04,0.8);
+      if(shed) al.forEach(a=>beam3(g,W(a,-B,R(a,-B)),W(a,B,R(a,B)),0.05,0.1,wood));
+      else al.forEach(a=>[-1,1].forEach(s=>{ const c0=hip?s*Math.max(0,Math.abs(a)-r):0; if(Math.abs(c0)>B-0.05) return; beam3(g,W(a,c0,R(a,c0)),W(a,s*B,R(a,s*B)),0.05,0.1,wood); }));
+      if(hip){
+        steps(-B+0.04,B-0.04,0.8).forEach(c=>[-1,1].forEach(e=>{ const a0=e*(r+Math.abs(c)); if(Math.abs(a0)>A-0.05) return; beam3(g,W(a0,c,R(a0,c)),W(e*A,c,R(e*A,c)),0.05,0.1,wood); }));
+        [-1,1].forEach(e=>[-1,1].forEach(s=>beam3(g,W(e*r,0,Yr-0.17),W(e*A,s*B,Ye-0.17),0.07,0.14,wood)));
       }
-    } else {
-      const top=new T.Mesh(geo,roofMat(rf.color,kind)); top.castShadow=true; top.receiveShadow=true; g.add(top);
-      const under=new T.Mesh(geo,mat('#cdb497',{side:T.BackSide,roughness:0.9})); under.position.y=-0.05; under.receiveShadow=true; g.add(under);
+      /* แป */
+      if(shed) steps(-B+0.1,B-0.1,0.6).forEach(c=>beam3(g,W(-A,c,Pu(0,c)),W(A,c,Pu(0,c)),0.05,0.04,pc));
+      else steps(0.15,B-0.05,0.6).forEach(d=>[-1,1].forEach(s=>{
+        if(hip){ beam3(g,W(-(r+d),s*d,Pu(0,s*d)),W(r+d,s*d,Pu(0,s*d)),0.05,0.04,pc); beam3(g,W(s*(r+d),-d,Pu(s*(r+d),0)),W(s*(r+d),d,Pu(s*(r+d),0)),0.05,0.04,pc); }
+        else beam3(g,W(-A,s*d,Pu(0,s*d)),W(A,s*d,Pu(0,s*d)),0.05,0.04,pc);
+      }));
+      /* อกไก่ */
+      if(gable) beam3(g,W(-A,0,Yr-0.17),W(A,0,Yr-0.17),0.06,0.16,wood);
+      if(hip&&r>0.01) beam3(g,W(-r,0,Yr-0.17),W(r,0,Yr-0.17),0.06,0.16,wood);
+      /* ขื่อ + ดั้ง */
+      steps(-Lh+0.1,Lh-0.1,1.6).forEach(a=>{ beam3(g,W(a,-(hw-TT),H-0.06),W(a,hw-TT,H-0.06),0.06,0.12,wood); if(!shed){ const top=Y(a,0)-0.25; if(top>H+0.2) beam3(g,W(a,0,H),W(a,0,top),0.08,0.08,wood); } });
     }
-  });
-  addBox(g,ax?2*A:0.2,0.09,ax?0.2:2*A,rf.mat==='tile'?shade(rf.color,-0.18):shade(wood,-0.15),cx,Yr-0.045,cz);
-  [-1,1].forEach(s=>{ const p=W(0,s*(hw+o),0); addBox(g,ax?2*A:0.03,0.14,ax?0.03:2*A,rf.mat==='tile'||rf.mat==='metal'?'#efe9df':wood,p.x,Ye-0.13,p.z); });
-  /* หน้าจั่ว: ทึบตามสีผนัง หรือเป็นตาข่ายกรอบไม้ถ้าหลังคาช่วงนั้นเป็นตาข่ายหรือผนังเป็นตาข่าย */
-  const wc=rooms[0].wallColor, meshWalls=rooms.every(r=>SEE(r.wallType)), shp=new T.Shape([new T.Vector2(-hw,H),new T.Vector2(hw,H),new T.Vector2(0,Yr)]);
-  [[-L/2,segs[0][2]],[L/2-TT,segs[segs.length-1][2]]].forEach(([a0,kind])=>{
-    const mesh=SEE(kind)||meshWalls, see=SEE(kind)?kind:rooms[0].wallType;
-    const m=new T.Mesh(new T.ExtrudeGeometry(shp,{depth:TT,bevelEnabled:false}),mesh?[seeMat(see,5,5),mat(wood,{roughness:0.8})]:[mat(wc,{roughness:0.95}),mat(shade(wc,-0.2),{roughness:0.9})]);
-    if(ax){ m.rotation.y=Math.PI/2; m.position.set(cx+a0,0,cz); } else m.position.set(cx,0,cz+a0); m.castShadow=!mesh; m.receiveShadow=true; g.add(m);
-    if(mesh){ const c0=W(a0+TT/2,0,0), len=Math.hypot(hw,Yr-H); [-1,1].forEach(s=>{ const r=addBox(g,ax?0.06:len,0.06,ax?len:0.06,wood,0,0,0); const p=W(a0+TT/2,s*hw/2,(H+Yr)/2); r.position.copy(p); if(ax) r.rotation.x=s*Math.atan2(Yr-H,hw); else r.rotation.z=-s*Math.atan2(Yr-H,hw); }); addBox(g,0.06,Yr-H,0.06,wood,c0.x,H,c0.z); }
-  });
+    /* อเส: คานบนหัวผนัง */
+    [-1,1].forEach(s=>beam3(g,W(-Lh,s*(hw-TT/2),H-0.03),W(Lh,s*(hw-TT/2),H-0.03),0.08,0.06,wood));
+    if(hip||flat) [-1,1].forEach(e=>beam3(g,W(e*(Lh-TT/2),-hw,H-0.03),W(e*(Lh-TT/2),hw,H-0.03),0.08,0.06,wood));
+  }
+  /* หน้าจั่ว / ผนังปิดหัวท้ายของเพิง: ทึบตามสีผนัง หรือเป็นตาข่ายกรอบไม้ */
+  if(gable||shed){
+    const wc=rooms[0].wallColor, meshWalls=rooms.every(r2=>SEE(r2.wallType)), tri=(shed?[[-hw,H],[hw,H],[-fl*hw,Yr]]:[[-hw,H],[hw,H],[0,Yr]]).map(p=>[p[0],p[1]-0.05]);
+    const shp=new T.Shape(tri.map(p=>new T.Vector2(ax?-p[0]:p[0],p[1])));
+    [[-Lh,kinds[0][1]],[Lh-TT,kinds[kinds.length-1][1]]].forEach(([a0,kind])=>{
+      const mesh=SEE(kind)||meshWalls, see=SEE(kind)?kind:rooms[0].wallType;
+      const m=new T.Mesh(new T.ExtrudeGeometry(shp,{depth:TT,bevelEnabled:false}),mesh?[seeMat(see,5,5),mat(wood,{roughness:0.8})]:[mat(wc,{roughness:0.95}),mat(shade(wc,-0.2),{roughness:0.9})]);
+      if(ax){ m.rotation.y=Math.PI/2; m.position.set(cx+a0,0,cz); } else m.position.set(cx,0,cz+a0); m.castShadow=!mesh; m.receiveShadow=true; g.add(m);
+      if(mesh&&gable){ const c0=W(a0+TT/2,0,0), len=Math.hypot(hw,Yr-H); [-1,1].forEach(s=>{ const rr=addBox(g,ax?0.06:len,0.06,ax?len:0.06,wood,0,0,0); rr.position.copy(W(a0+TT/2,s*hw/2,(H+Yr)/2)); if(ax) rr.rotation.x=s*Math.atan2(Yr-H,hw); else rr.rotation.z=-s*Math.atan2(Yr-H,hw); }); addBox(g,0.06,Yr-H,0.06,wood,c0.x,H,c0.z); }
+    });
+    if(shed){ const mesh=meshWalls, p=W(0,-fl*(hw-TT/2),H), m=addBox(g,ax?2*Lh:TT,Yr-H-0.05,ax?TT:2*Lh,wc,p.x,H-0.05,p.z); if(mesh) m.material=seeMat(rooms[0].wallType,5,5); }
+  }
 }
 function updateWallCut(force){
   if(!R3.ok) return; const cp=R3.cam.position, mode=(WK.on||roofShown())?'full':UI.wallMode;
@@ -1661,7 +1840,18 @@ function syncShapes3d(){
     if(s.id===sel&&k===P.cur){ const e=new T.LineSegments(new T.EdgesGeometry(m.geometry),R3.selMat); e.rotation.copy(m.rotation); e.position.copy(m.position); g.add(e); }
   }); }
 }
-function sync3d(){ if(!R3.ok||!P) return; const k=shellKey(); if(k!==R3.key){ R3.key=k; buildShell(); } syncItems3d(); syncShapes3d(); need3=true; }
+const wireMat=c=>mat(WIRE_KINDS[c][1],{roughness:0.5});
+function syncWires3d(){
+  const sel=SEL&&SEL.kind==='wire'?SEL.id:null, key=JSON.stringify([UI.wires,P.cur,P.wallH,P.floors.slice(0,P.cur+1).map(f=>[f.wires,f.items.filter(it=>isElec(it)||isLight(it))]),sel]); if(key===R3.wkey) return; R3.wkey=key;
+  const g=R3.wiresRoot; disposeTree(g); while(g.children.length) g.remove(g.children[0]); if(!UI.wires) return;
+  const yc=P.wallH-CEIL_GAP;
+  for(let k=0;k<=P.cur;k++){ const ey=elevOf(k), fl=P.floors[k]; fl.wires.forEach(w=>{
+    const on=w.id===sel&&k===P.cur, m=on?mat(TK.accent,{roughness:0.5}):wireMat(w.c), r=on?0.02:0.012, dr=wireDrops(w,fl);
+    for(let i=1;i<w.pts.length;i++){ const a=w.pts[i-1], b=w.pts[i]; rod(g,new T.Vector3(a[0],ey+yc,a[1]),new T.Vector3(b[0],ey+yc,b[1]),r,m); }
+    w.pts.forEach((q,i)=>{ const d=dr[i]; if(d&&yc-d.y>0.02) rod(g,new T.Vector3(q[0],ey+yc,q[1]),new T.Vector3(q[0],ey+d.y,q[1]),r,m); });
+  }); }
+}
+function sync3d(){ if(!R3.ok||!P) return; const k=shellKey(); if(k!==R3.key){ R3.key=k; buildShell(); } syncItems3d(); syncShapes3d(); syncWires3d(); syncLamps(); need3=true; }
 function applyCam(){
   if(!R3.ok) return; const c=R3.cam;
   if(WK.on){ c.position.set(WK.x,WK.eye,WK.z); c.lookAt(WK.x-Math.sin(WK.yaw)*Math.cos(WK.pitch),WK.eye+Math.sin(WK.pitch),WK.z-Math.cos(WK.yaw)*Math.cos(WK.pitch)); }
@@ -1792,6 +1982,14 @@ function statusHtml(it){ const pr=PROB[it.id]; return pr?`ระวัง: ${esc
 function pgEdit(){
   const o=selObj();
   if(!o) return `<p class="empty">แตะของ ห้อง ประตู หรือหน้าต่างบนแปลนเพื่อแก้ไข</p>`;
+  if(SEL.kind==='wire'){
+    const fl=curFloor(), n=wireDrops(o,fl).filter(Boolean).length;
+    return `<div class="ttl">สาย${esc(WIRE_KINDS[o.c][0])}</div>
+    <h3>วงจร</h3><div class="seg sm" style="margin-bottom:8px">${Object.keys(WIRE_KINDS).map(k=>`<button type="button" data-act="wkind" data-v="${k}" aria-pressed="${o.c===k}">${WIRE_KINDS[k][0]}</button>`).join('')}</div>
+    <div class="kv"><span>ยาวบนแปลน</span><b>${f2(planLen(o.pts))} ม.</b><span>ต่อเข้าของไฟฟ้า</span><b>${n} จุด</b><span>ยาวรวมสายที่ลงจากฝ้า</span><b>${f2(wireLen(o,fl))} ม.</b></div>
+    <p class="muted small" style="margin:10px 0 0">สายวิ่งใต้ฝ้า จุดที่วางบนปลั๊ก สวิตช์ หรือหลอดไฟ จะนับสายที่ลงไปหาของนั้นให้ด้วย · ลากจุดเพื่อแก้เส้น ลากเส้นเพื่อย้าย</p>
+    <div class="btnrow sep">${SEL.i!=null&&o.pts.length>2?`<button type="button" class="btn" data-act="delWPt">ลบจุดที่เลือก</button>`:''}<button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
+  }
   if(SEL.kind==='shape'){
     const b=bboxPts(o.pts), rect=isRect(o);
     return `<input id="s-name" class="in-name" type="text" value="${esc(o.name)}" aria-label="ชื่อรูปทรง">
@@ -1825,6 +2023,7 @@ function pgEdit(){
     <ol class="walls">${o.pts.map((q,i)=>`<li class="${SEL.wall===i?'on':''}"><button type="button" class="wl" data-act="pickWall" data-v="${i}"><span>ผนัง ${i+1}</span><b>${cm(edgeOf(o,i).len)}</b></button><button type="button" class="btn sm" data-act="split" data-v="${i}">แบ่งครึ่ง</button></li>`).join('')}</ol>
     ${SEL.corner!=null&&o.pts.length>3?`<div class="btnrow"><button type="button" class="btn" data-act="delCorner">ลบมุมที่เลือก</button></div>`:''}
     <h3>ผนังห้องนี้</h3><div class="seg sm" style="margin-bottom:4px">${Object.keys(WALL_TYPES).map(k=>`<button type="button" data-act="wtype" data-v="${k}" aria-pressed="${(o.wallType||'solid')===k}">${WALL_TYPES[k]}</button>`).join('')}</div>
+    ${roofOf(P).mode==='room'?`<h3>หลังคาห้องนี้</h3><div class="seg sm" style="margin-bottom:4px;flex-wrap:wrap">${[['','ตามแบบหลัก'],...Object.entries(ROOF_STYLES),['none','ไม่มี']].map(([k,t])=>`<button type="button" data-act="rroof" data-v="${k}" aria-pressed="${(o.roof||'')===k}">${t}</button>`).join('')}</div>`:''}
     <h3>พื้น</h3><div class="seg sm" style="margin-bottom:8px">${Object.keys(FLOOR_NAMES).map(k=>`<button type="button" data-act="floor" data-v="${k}" aria-pressed="${o.floor===k}">${FLOOR_NAMES[k]}</button>`).join('')}</div>
     <div class="sw">${swatches(FLOOR_COLORS,o.floorColor,'fcol')}</div>
     <h3>สีผนัง</h3><div class="sw">${swatches(WALL_COLORS,o.wallColor,'wcol')}</div>
@@ -1839,6 +2038,7 @@ function pgEdit(){
   <div class="btnrow sep"><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
 }
 function pgInfo(){
+  const es=elecStats(); es.any=Object.values(es.n).some(Boolean)||es.tot>0;
   const rf=roofOf(P), tA=P.rooms.reduce((s,r)=>s+((STATS[r.id]||{}).area||0),0), tF=P.rooms.reduce((s,r)=>s+((STATS[r.id]||{}).free||0),0);
   return `<h3>ห้องในแปลนนี้</h3>
   ${P.rooms.length?`<ul class="rooms">${P.rooms.map(r=>{ const st=STATS[r.id]||{area:0,free:0}; return `<li><button type="button" data-act="pickRoom" data-v="${r.id}"><span>${esc(r.name)}</span><span class="num">${f2(st.area)} ม² · ว่าง ${f2(st.free)}</span></button></li>`; }).join('')}</ul>
@@ -1850,12 +2050,25 @@ function pgInfo(){
   <p class="muted small" style="margin:8px 0 0">บันไดอยู่หมวด "อื่น ๆ" วางที่ชั้นล่าง แล้วชั้นบนจะมีช่องโล่งตรงบันไดให้เอง</p>
   <h3>ผนังทุกห้อง (ซม.)</h3>
   <div class="f3"><label class="f" for="p-wh">สูง<input id="p-wh" type="number" inputmode="numeric" min="180" value="${cm(P.wallH)}"></label><label class="f" for="p-wt">หนา<input id="p-wt" type="number" inputmode="numeric" min="4" value="${cm(P.wallT)}"></label></div>
-  <h3>หลังคาจั่ว (เห็นในภาพ 3D)</h3>
-  <div class="seg sm" style="margin-bottom:8px;flex-wrap:wrap">${Object.keys(ROOF_MATS).map(k=>`<button type="button" data-act="rmat" data-v="${k}" aria-pressed="${(rf.mat||'tile')===k}">${ROOF_MATS[k]}</button>`).join('')}</div>
+  <h3>ไฟฟ้าทั้งบ้าน</h3>
+  ${es.any?`<div class="kv"><span>ปลั๊ก</span><b>${es.n.plug} จุด</b><span>สวิตช์</span><b>${es.n.switch} จุด</b><span>หลอดไฟ/โคม</span><b>${es.n.light} ดวง</b><span>ตู้ไฟ</span><b>${es.n.panel} ตู้</b>${es.n.other?`<span>พัดลมเพดาน/อื่น ๆ</span><b>${es.n.other}</b>`:''}${Object.keys(WIRE_KINDS).filter(k=>es.len[k]>0).map(k=>`<span>สาย${WIRE_KINDS[k][0]}</span><b>${f2(es.len[k])} ม.</b>`).join('')}<span>สายไฟรวม</span><b>${f2(es.tot)} ม.</b>${es.tot>0?`<span>ควรซื้อเผื่อ (+15%)</span><b>${Math.ceil(es.tot*1.15)} ม.</b>`:''}</div>`:`<p class="muted small" style="margin:0">ยังไม่มีของไฟฟ้าในแปลนนี้</p>`}
+  <label class="chk" style="margin-top:6px"><input type="checkbox" id="u-wires" ${UI.wires?'checked':''}> แสดงสายไฟ</label>
+  <div class="btnrow"><button type="button" class="btn" data-act="elecCat">${ic('add',16)}เพิ่มปลั๊ก สวิตช์ หลอดไฟ</button><button type="button" class="btn" data-act="wireTool">${ic('bolt',16)}ลากสายไฟ</button></div>
+  <h3>หลังคา (เห็นในภาพ 3D)</h3>
   <label class="chk"><input type="checkbox" id="u-roof" ${UI.roof?'checked':''}> แสดงหลังคา</label>
+  <div class="seg sm" style="margin:6px 0 8px;flex-wrap:wrap">${Object.keys(ROOF_STYLES).map(k=>`<button type="button" data-act="rstyle" data-v="${k}" aria-pressed="${(rf.style||'gable')===k}">${ROOF_STYLES[k]}</button>`).join('')}</div>
+  <div class="seg sm" style="margin-bottom:8px">${[['all','คลุมทั้งหลัง'],['room','แยกทีละห้อง']].map(m=>`<button type="button" data-act="rmode" data-v="${m[0]}" aria-pressed="${(rf.mode||'all')===m[0]}">${m[1]}</button>`).join('')}</div>
+  ${rf.mode==='room'?`<p class="muted small" style="margin:0 0 8px">แตะห้อง แล้วเลือกแบบหลังคาของห้องนั้นที่แท็บ "แก้ไข"</p>`:''}
+  <div class="seg sm" style="margin-bottom:8px;flex-wrap:wrap">${Object.keys(ROOF_MATS).map(k=>`<button type="button" data-act="rmat" data-v="${k}" aria-pressed="${(rf.mat||'tile')===k}">${ROOF_MATS[k]}</button>`).join('')}</div>
   <div class="sw" style="margin-top:6px">${swatches(ROOF_COLORS,rf.color,'rcol')}</div>
-  <div class="seg sm" style="margin-top:10px">${PITCHES.map(p=>`<button type="button" data-act="rpitch" data-v="${p[0]}" aria-pressed="${rf.pitch===p[0]}">${p[1]}</button>`).join('')}</div>
-  <div class="btnrow"><button type="button" class="btn" data-act="roofAxis">${ic('rotr',16)}หมุนแนวสันหลังคา</button></div>
+  <p class="muted small" style="margin:10px 0 4px">ความชัน</p>
+  <div class="seg sm">${PITCHES.map(p=>`<button type="button" data-act="rpitch" data-v="${p[0]}" aria-pressed="${rf.pitch===p[0]}">${p[1]}</button>`).join('')}</div>
+  <p class="muted small" style="margin:10px 0 4px">ชายคายื่นออกนอกผนัง (ซม.)</p>
+  <div class="seg sm" style="flex-wrap:wrap">${OVERS.map(p=>`<button type="button" data-act="rover" data-v="${p[0]}" aria-pressed="${Math.abs((rf.over==null?0.45:rf.over)-p[0])<0.01}">${p[1]}</button>`).join('')}</div>
+  <label class="chk" style="margin-top:6px"><input type="checkbox" id="u-gutter" ${rf.gutter?'checked':''}> รางน้ำ + ท่อน้ำลง</label>
+  <p class="muted small" style="margin:6px 0 4px">ดูแบบ</p>
+  <div class="seg sm">${ROOF_VIEWS.map(p=>`<button type="button" data-act="rview" data-v="${p[0]}" aria-pressed="${UI.roofView===p[0]}">${p[1]}</button>`).join('')}</div>
+  <div class="btnrow"><button type="button" class="btn" data-act="roofAxis">${ic('rotr',16)}หมุนแนวสันหลังคา</button>${rf.style==='shed'||rf.mode==='room'?`<button type="button" class="btn" data-act="rflip">${ic('flip',16)}สลับด้านสูงของเพิง</button>`:''}</div>
   <h3>แสดงบนแปลน</h3>
   <label class="chk"><input type="checkbox" id="u-labels" ${UI.labels?'checked':''}> ชื่อของ</label>
   <label class="chk"><input type="checkbox" id="u-dims" ${UI.dims?'checked':''}> ความยาวผนัง</label>
@@ -1866,6 +2079,8 @@ function pgInfo(){
     <li>ลากที่ว่างเพื่อเลื่อนแปลน ใช้สองนิ้วหรือล้อเมาส์เพื่อซูม</li>
     <li>3D: ลากเพื่อหมุนรอบ สองนิ้วหรือคลิกขวาเพื่อเลื่อน กด "เดินดู" เพื่อเดินในห้อง</li>
     <li>ปั้นรูปทรง (แบบ SketchUp): แตะวางมุมหรือลากเป็นสี่เหลี่ยม แล้วใน 3D ลากด้านบนขึ้นลงเพื่อดัน/ดึงความสูง</li>
+    <li>ไฟฟ้า: วางปลั๊ก สวิตช์ หลอดไฟ ตู้ไฟ จากหมวด "ไฟฟ้า" แล้วกด "สายไฟ" แตะทีละจุดจากตู้ไฟไปหาของ แตะจุดสุดท้ายซ้ำเพื่อจบสาย · ใน 3D กด "เปิดไฟ" ดูตอนกลางคืน</li>
+    <li>หลังคา: เลือกจั่ว ปั้นหยา เพิงหมาแหงน หรือแบน ปรับชายคา ใส่รางน้ำ และดูโครงหลังคาได้ที่หัวข้อ "หลังคา" ด้านบน</li>
     <li>หลายชั้น: แตะ "ชั้น 1 / ชั้น 2" มุมซ้ายบนเพื่อสลับ กด "+ ชั้น" เพื่อเพิ่มชั้น (คอม: PageUp / PageDown)</li>
     <li>แอปเซฟให้เองทุกครั้งที่แก้ กด "บันทึก" เพื่อเซฟทันที · กด "PDF" ได้ไฟล์แปลน ภาพ 3D และรายการของ</li>
     <li>คีย์บอร์ด: Delete ลบ · R หมุน · Ctrl+Z ย้อน · Ctrl+D ทำซ้ำ · Ctrl+S บันทึก · ลูกศรขยับ 1 ซม.</li>
@@ -1888,7 +2103,7 @@ function setSheet(open){ UI.open=open; $('side').dataset.open=open?'1':'0'; requ
 function select(s,keepTab){
   SEL=s; UI.arm=null;
   if(s&&!keepTab&&UI.tab!=='edit') UI.tab='edit';
-  renderPanel(); updateFab(); need2=true; if(R3.ok){ syncItems3d(); syncShapes3d(); need3=true; }
+  renderPanel(); updateFab(); need2=true; if(R3.ok){ syncItems3d(); syncShapes3d(); syncWires3d(); need3=true; }
 }
 function updateFab(){
   const f=$('fab'), o=selObj(); if(!o){ f.hidden=true; return; }
@@ -1898,13 +2113,14 @@ function updateFab(){
   if(SEL.kind==='item') h=B('rotR','rotr','หมุน')+B('dup','dup','ทำซ้ำ')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='open') h=(o.kind==='door'?B('flipOut','flip','กลับทางเปิด'):'')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='shape') h=B('rotR','rotr','หมุน')+B('dup','dup','ทำซ้ำ')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
+  else if(SEL.kind==='wire') h=B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else h=B('openEdit','edit','แก้ขนาด สี ผนัง');
   f.innerHTML=h; f.hidden=false;
 }
 
 /* ---------------- คำสั่งจากปุ่ม ---------------- */
 function addItem(type){
-  const c=C[type]; const it={id:uid('i'),type,x:0,y:0,rot:0,w:c.w,d:c.d,h:c.h,elev:c.elev||0};
+  const c=C[type]; const it={id:uid('i'),type,x:0,y:0,rot:0,w:c.w,d:c.d,h:c.h,elev:c.ceil?rd(P.wallH-c.h):(c.elev||0)};
   let cx, cy; if(UI.view==='3d'&&R3.ok){ cx=CAM.tx; cy=CAM.tz; } else { const w=s2w(W2/2,H2/2); cx=w[0]; cy=w[1]; }
   const dist=r=>{ const lp=labelPoint(r.pts); return Math.hypot(lp[0]-cx,lp[1]-cy); };
   const tries=[roomAt(cx,cy),SEL&&SEL.kind==='room'?getRoom(SEL.id):null,...P.rooms.slice().sort((a,b)=>dist(a)-dist(b))].filter((r,i,a)=>r&&a.indexOf(r)===i);
@@ -1925,6 +2141,7 @@ function delSel(){
   if(SEL.kind==='item') P.items=P.items.filter(x=>x!==o);
   else if(SEL.kind==='open') P.openings=P.openings.filter(x=>x!==o);
   else if(SEL.kind==='shape') P.shapes=P.shapes.filter(x=>x!==o);
+  else if(SEL.kind==='wire') P.wires=P.wires.filter(x=>x!==o);
   else return;
   select(null,true); commit();
 }
@@ -1933,6 +2150,7 @@ function dupSel(){
   if(SEL.kind==='item'){ const c=deep(o); c.id=uid('i'); c.x=rd(o.x+0.15); c.y=rd(o.y+0.15); P.items.push(c); select({kind:'item',id:c.id},true); commit(); }
   else if(SEL.kind==='room') act('dupRoom',{dataset:{}});
   else if(SEL.kind==='shape'){ const c=deep(o); c.id=uid('s'); c.name=o.name+' (สำเนา)'; c.pts=o.pts.map(q=>[rd(q[0]+0.2),rd(q[1]+0.2)]); P.shapes.push(c); select({kind:'shape',id:c.id},true); commit(); }
+  else if(SEL.kind==='wire'){ const c=deep(o); c.id=uid('w'); c.pts=o.pts.map(q=>[rd(q[0]+0.2),rd(q[1]+0.2)]); P.wires.push(c); select({kind:'wire',id:c.id},true); commit(); }
 }
 function rotSel(d){
   const o=selObj(); if(!o) return;
@@ -1950,7 +2168,7 @@ function act(a,el){
     case 'dup': dupSel(); break;
     case 'del': delSel(); break;
     case 'openEdit': setTab('edit',true); break;
-    case 'size0': if(o&&SEL.kind==='item'){ const c=C[o.type]; o.w=c.w; o.d=c.d; o.h=c.h; o.elev=c.elev||0; commit(); } break;
+    case 'size0': if(o&&SEL.kind==='item'){ const c=C[o.type]; o.w=c.w; o.d=c.d; o.h=c.h; o.elev=c.ceil?rd(P.wallH-c.h):(c.elev||0); commit(); } break;
     case 'icol': if(o&&SEL.kind==='item'){ if(v) o.color=v; else delete o.color; commit(); } break;
     case 'scol': if(o&&SEL.kind==='shape'){ o.color=v; commit(); } break;
     case 'smat': if(o&&SEL.kind==='shape'){ o.mat=v; if(v==='wood'&&!['#b58a5f','#7a5236'].includes(o.color)) o.color='#b58a5f'; if(v==='glass'&&!['#3f6fb5','#2f7d6b','#f3f1ec'].includes(o.color)) o.color='#8fc3e0'; commit(); } break;
@@ -1975,6 +2193,16 @@ function act(a,el){
     case 'rmat': { const rf=roofOf(P); if(rf.mat!==v){ rf.mat=v; rf.color=ROOF_MAT_COLOR[v]||rf.color; } commit(); setRoof(true); break; }
     case 'wtype': if(o&&SEL.kind==='room'){ o.wallType=v; commit(); if(R3.ok&&v==='mesh'&&UI.view==='2d') toast('ดูผนังตาข่ายได้ในภาพ 3D'); } break;
     case 'roofAxis': roofOf(P).axis=roofAlong()==='x'?'y':'x'; commit(); setRoof(true); break;
+    case 'rstyle': roofOf(P).style=v; commit(); setRoof(true); break;
+    case 'rmode': roofOf(P).mode=v; commit(); setRoof(true); break;
+    case 'rover': roofOf(P).over=+v; commit(); setRoof(true); break;
+    case 'rflip': roofOf(P).flip=!roofOf(P).flip; commit(); setRoof(true); break;
+    case 'rview': UI.roofView=v; savePrefs(); renderPanel(); sync3d(); setRoof(true); break;
+    case 'rroof': if(o&&SEL.kind==='room'){ o.roof=v; commit(); setRoof(true); } break;
+    case 'wkind': if(o&&SEL.kind==='wire'){ o.c=v; UI.wireKind=v; commit(); } break;
+    case 'delWPt': if(o&&SEL.kind==='wire'&&SEL.i!=null&&o.pts.length>2){ o.pts.splice(SEL.i,1); SEL.i=null; commit(); } break;
+    case 'elecCat': UI.cat='elec'; UI.q=''; setTab('add',true); break;
+    case 'wireTool': setTool('wire'); break;
   }
 }
 /* ---------------- ชั้นของบ้าน ---------------- */
@@ -2025,8 +2253,10 @@ function onField(el,final){
   if(id==='c-q'){ UI.q=el.value; $('c-grid').innerHTML=gridHtml(); document.querySelectorAll('#c-cats .chip').forEach(c=>c.setAttribute('aria-pressed',(!UI.q&&UI.cat===c.dataset.v)?'true':'false')); drawCardThumbs(); return; }
   if(id==='u-labels'||id==='u-dims'){ UI[id==='u-labels'?'labels':'dims']=el.checked; savePrefs(); need2=true; return; }
   if(id==='u-roof'){ setRoof(el.checked); return; }
+  if(id==='u-gutter'){ roofOf(P).gutter=el.checked; commit(); setRoof(true); return; }
+  if(id==='u-wires'){ UI.wires=el.checked; savePrefs(); need2=true; sync3d(); return; }
   if(/^fl-\d+$/.test(id)){ const k=+id.slice(3); if(P.floors[k]){ P.floors[k].name=el.value.trim().slice(0,40)||('ชั้น '+(k+1)); renderFloorBar(); if(final) commit(); } return; }
-  if(id==='p-wh'){ const v=numIn(el,180,500); if(v!=null){ P.wallH=v/100; P.openings.forEach(x=>{ if(x.kind==='door') x.h=Math.min(x.h,P.wallH-0.05); }); live(); } }
+  if(id==='p-wh'){ const v=numIn(el,180,500); if(v!=null){ const old=P.wallH; P.wallH=v/100; P.openings.forEach(x=>{ if(x.kind==='door') x.h=Math.min(x.h,P.wallH-0.05); }); P.floors.forEach(f=>f.items.forEach(it=>{ if(C[it.type].ceil&&Math.abs((it.elev||0)+it.h-old)<0.03) it.elev=rd(Math.max(0,P.wallH-it.h)); })); live(); } }
   else if(id==='p-wt'){ const v=numIn(el,4,40); if(v!=null){ P.wallT=v/100; live(); } }
   else if(o&&SEL.kind==='item'){
     if(id==='e-name'){ const t=el.value.trim(); if(!t||t===C[o.type].name) delete o.name; else o.name=t.slice(0,60); need2=true; }
@@ -2055,6 +2285,7 @@ side.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.matches('input
 function setTool(t){
   if(t==='add'){ setTool('select'); setTab('add',true); return; }
   TOOL=t; D.pts=[]; D.hover=null;
+  if(t==='wire'&&!UI.wires){ UI.wires=true; savePrefs(); sync3d(); }
   HOV=null; if(t!=='select'&&SEL){ SEL=null; renderPanel(); }
   document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t?'true':'false'));
   if(t!=='select'&&UI.view==='3d') setView(isWide()?'split':'2d');
@@ -2087,6 +2318,8 @@ $('roofBtn').addEventListener('click',()=>{ setRoof(!UI.roof); toast(UI.roof?'�
 $('undoBtn').addEventListener('click',undo); $('redoBtn').addEventListener('click',redo);
 $('dbUndo').addEventListener('click',()=>{ D.pts.pop(); updDrawBar(); need2=true; });
 $('dbClose').addEventListener('click',finishDraw);
+$('dbKinds').addEventListener('click',e=>{ const b=e.target.closest('[data-wk]'); if(!b) return; UI.wireKind=b.dataset.wk; updDrawBar(); });
+$('lightBtn').addEventListener('click',()=>setNight(!UI.night));
 $('dbCancel').addEventListener('click',()=>setTool('select'));
 $('dbLen').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); drawTyped(); } });
 document.addEventListener('keydown',e=>{
@@ -2203,6 +2436,7 @@ async function exportPdf(){
       const tA=P.rooms.reduce((s,r)=>s+((STATS[r.id]||{}).area||0),0);
       x.fillStyle='#d0d8d3'; x.fillRect(cx0,y-14,370,2); y+=22; x.fillStyle='#1d282d'; x.font=PF.b; x.fillText('รวม '+f2(tA)+' ม² · ของ '+P.items.length+' ชิ้น',cx0,y); y+=36;
       x.fillStyle='#5b686d'; x.font=PF.s; x.fillText('ผนังสูง '+cm(P.wallH)+' ซม. · หนา '+cm(P.wallT)+' ซม.',cx0,y);
+      const wl=fl.wires.reduce((s,w)=>s+wireLen(w,fl),0); if(wl>0){ y+=34; x.fillText('สายไฟชั้นนี้ '+f2(wl)+' ม. (เผื่อ +15% = '+Math.ceil(wl*1.15)+' ม.)',cx0,y); }
       const nb=Object.keys(PROB).length; if(nb){ y+=34; x.fillStyle='#c13d29'; x.fillText('กรอบแดง = ของชนกันหรือขวางประตู ('+nb+' ชิ้น)',cx0,y); }
       addPage(pg.c);
     }
@@ -2249,8 +2483,8 @@ function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; 
 function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
 function loadLocal(){ const s=lsGet(LSK); let o={}; if(s){ try{ o=JSON.parse(s)||{}; }catch(e){} } const out={}; Object.keys(o).forEach(id=>{ const p=cleanProject(o[id]); if(p) out[p.id]=p; }); return out; }
 function saveLocal(){ const o=Object.assign({},ALL); if(AUTO) delete o[AUTO]; lsSet(LSK,JSON.stringify(o)); }
-function savePrefs(){ lsSet(LSU,JSON.stringify({view:UI.view,labels:UI.labels,dims:UI.dims,wallMode:UI.wallMode,roof:UI.roof})); }
-function loadPrefs(){ try{ const o=JSON.parse(lsGet(LSU)||'{}'); if(o.view) UI.view=o.view; if(typeof o.labels==='boolean') UI.labels=o.labels; if(typeof o.dims==='boolean') UI.dims=o.dims; if(o.wallMode) UI.wallMode=o.wallMode; if(typeof o.roof==='boolean') UI.roof=o.roof; }catch(e){} }
+function savePrefs(){ lsSet(LSU,JSON.stringify({view:UI.view,labels:UI.labels,dims:UI.dims,wallMode:UI.wallMode,roof:UI.roof,wires:UI.wires,roofView:UI.roofView})); }
+function loadPrefs(){ try{ const o=JSON.parse(lsGet(LSU)||'{}'); if(o.view) UI.view=o.view; if(typeof o.labels==='boolean') UI.labels=o.labels; if(typeof o.dims==='boolean') UI.dims=o.dims; if(o.wallMode) UI.wallMode=o.wallMode; if(typeof o.roof==='boolean') UI.roof=o.roof; if(typeof o.wires==='boolean') UI.wires=o.wires; if(ROOF_VIEWS.some(v=>v[0]===o.roofView)) UI.roofView=o.roofView; }catch(e){} }
 function setSave(s){ const t={saving:'กำลังบันทึก…',cloud:'บันทึกแล้ว',local:'บันทึกในเครื่องนี้',err:'บันทึกไม่สำเร็จ',retry:'กำลังลองใหม่…'}[s]||''; $('saveTxt').textContent=t; $('saveDot').dataset.s=s; $('saveDot').title=t; }
 function saveSoon(){
   if(!P) return; P.updated=Date.now(); ALL[P.id]=P; setSave('saving');
@@ -2439,7 +2673,7 @@ applyCam();
 requestAnimationFrame(loop);
 showHome();
 initCloud().catch(()=>setSave('local'));
-window.__room={get P(){return P;},C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf,showHome,pick3,CAM};
+window.__room={get P(){return P;},C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf,showHome,pick3,CAM,w2s,setNight,elecStats};
 })();
 </script>
 </body></html>
