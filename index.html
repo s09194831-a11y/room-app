@@ -386,7 +386,7 @@ function rnd(){ seed=(seed*16807)%2147483647; return seed/2147483647; }
 const col=(it,d)=>(it&&it.color)||d;
 
 /* ---------------- แคตตาล็อกของ (กว้าง w · ลึก d · สูง h เป็นเมตร, ด้านหน้าของหันไปทาง +z) ---------------- */
-const CATS=[['mine','ของในห้องฉัน'],['bedroom','ห้องนอน'],['work','ทำงาน/เกม'],['living','นั่งเล่น'],['hobby','งานอดิเรก/เล่น'],['kitchen','ครัว'],['bath','ห้องน้ำ'],['decor','ของแต่ง/สัตว์เลี้ยง'],['farm','เล้าไก่/ฟาร์ม'],['mushroom','โรงเห็ด'],['elec','ไฟฟ้า'],['other','อื่น ๆ']];
+const CATS=[['mine','ของในห้องฉัน'],['bedroom','ห้องนอน'],['work','ทำงาน/เกม'],['living','นั่งเล่น'],['hobby','งานอดิเรก/เล่น'],['kitchen','ครัว'],['bath','ห้องน้ำ'],['decor','ของแต่ง/สัตว์เลี้ยง'],['farm','เล้าไก่/ฟาร์ม'],['mushroom','โรงเห็ด'],['elec','ไฟฟ้า'],['vent','ระบายอากาศ'],['other','อื่น ๆ']];
 const C={}, ORDER=[];
 function def(key,cat,name,w,d,h,make,extra){ C[key]=Object.assign({key,cat,name,w,d,h,make,elev:0},extra||{}); ORDER.push(key); }
 
@@ -841,6 +841,11 @@ def('downlight','elec','ดาวน์ไลท์',0.12,0.12,0.04,g=>{ addCyl(
 def('tube','elec','หลอดนีออน 120 ซม.',1.22,0.1,0.06,g=>{ addBox(g,1.22,0.025,0.1,'#f3f1ec',0,0.035,0); const t=glow(addCyl(g,0.014,0.014,1.18,'#fff8ec',0,0,0,null,12),'#fff8ec'); t.rotation.z=Math.PI/2; t.position.set(0,0.02,0); },{elec:'light',light:1,ceil:1,lightY:0});
 def('walllamp','elec','โคมไฟผนัง',0.2,0.16,0.26,(g,it)=>{ addBox(g,0.08,0.12,0.02,'#2b2d31',0,0.07,-0.07); addBox(g,0.02,0.02,0.08,'#2b2d31',0,0.12,-0.03); glow(addCyl(g,0.07,0.09,0.16,col(it,'#f1e6cf'),0,0.06,0.02,null,24),col(it,'#f1e6cf'),1); },{elec:'light',light:1,colorable:1,elev:1.75,lightY:0.5});
 def('hbulb','elec','หลอดไฟห้อย',0.14,0.14,0.45,g=>{ addCyl(g,0.04,0.04,0.02,'#2b2d31',0,0.43,0); addCyl(g,0.004,0.004,0.3,'#2b2d31',0,0.13,0); addCyl(g,0.018,0.018,0.04,'#b58a5f',0,0.1,0); glow(addBlob(g,0.05,'#fff3d6',0,0.06,0,1,1.15,1),'#fff3d6'); },{elec:'light',light:1,ceil:1,lightY:0.13});
+/* ระบายอากาศ: ใบพัดที่มี userData.spin จะหมุนในภาพ 3D */
+function fanBlades(g,x,y,z,n,r,wd,color,v){ const hub=new T.Group(); hub.position.set(x,y,z); hub.userData.spin={ax:'z',v}; g.add(hub); for(let i=0;i<n;i++){ const b=new T.Group(); b.rotation.z=i*Math.PI*2/n; hub.add(b); const m=addBox(b,r,wd,0.008,color,r/2+0.02,-wd/2,0); m.rotation.x=0.35; } const cap=addCyl(hub,0.03,0.03,0.03,'#5b6670',0,-0.015,0); cap.rotation.x=Math.PI/2; return hub; }
+def('exfan','vent','พัดลมดูดอากาศ (ติดผนัง)',0.3,0.12,0.3,(g,it)=>{ const c=col(it,'#f3f1ec'); addBox(g,0.26,0.26,0.08,shade(c,-0.12),0,0.02,-0.02); addBox(g,0.3,0.03,0.03,c,0,0,0.045); addBox(g,0.3,0.03,0.03,c,0,0.27,0.045); addBox(g,0.03,0.3,0.03,c,-0.135,0,0.045); addBox(g,0.03,0.3,0.03,c,0.135,0,0.045); fanBlades(g,0,0.15,0.035,4,0.1,0.045,'#9aa1a8',9); },{elec:'other',colorable:1,elev:2.0});
+def('exfanc','vent','พัดลมดูดอากาศติดฝ้า',0.3,0.3,0.1,(g,it)=>{ const c=col(it,'#f3f1ec'); addBox(g,0.24,0.08,0.24,shade(c,-0.1),0,0.02,0); addBox(g,0.3,0.02,0.3,c,0,0,0); for(let i=0;i<6;i++) addBox(g,0.22,0.004,0.014,'#5b6670',0,-0.003,-0.1+i*0.04); },{elec:'other',colorable:1,ceil:1});
+def('farmfan','vent','พัดลมดูดอากาศใหญ่ (ฟาร์ม/โรงเห็ด)',1.0,0.4,1.0,(g,it)=>{ const c=col(it,'#b9bfc5'), o={metalness:.45,roughness:.45}; addBox(g,1.0,0.03,0.4,c,0,0,0,o); addBox(g,1.0,0.03,0.4,c,0,0.97,0,o); addBox(g,0.03,1.0,0.4,c,-0.485,0,0,o); addBox(g,0.03,1.0,0.4,c,0.485,0,0,o); fanBlades(g,0,0.5,0.05,3,0.4,0.16,'#8d969b',6); [-0.3,0,0.3].forEach(x=>addBox(g,0.008,0.94,0.008,'#5b6670',x,0.03,0.2)); [0.25,0.5,0.75].forEach(y=>addBox(g,0.94,0.008,0.008,'#5b6670',0,y,0.2)); },{elec:'other',colorable:1,elev:0.2});
 def('cfan','elec','พัดลมเพดาน',1.2,1.2,0.42,(g,it)=>{ const c=col(it,'#f3f1ec'); addCyl(g,0.06,0.06,0.03,c,0,0.39,0); addCyl(g,0.012,0.012,0.25,'#9aa1a8',0,0.14,0); addCyl(g,0.1,0.08,0.1,c,0,0.05,0,null,24); for(let i=0;i<3;i++){ const a=i*Math.PI*2/3, b=addBox(g,0.5,0.008,0.12,shade(c,-0.05),Math.cos(a)*0.33,0.08,Math.sin(a)*0.33); b.rotation.y=-a; } },{elec:'other',colorable:1,ceil:1});
 
 const ITEM_COLORS=['#f3f1ec','#d9cfbf','#b58a5f','#7a5236','#2b2d31','#6b7280','#3f6fb5','#2f7d6b','#c2263f','#e8b931','#e58bb0','#8e5bb5'];
@@ -857,7 +862,9 @@ const PITCHES=[[20,'ชันน้อย'],[30,'กลาง'],[40,'ชัน�
 const ROOF_STYLES={gable:'จั่ว',hip:'ปั้นหยา',shed:'เพิงหมาแหงน',flat:'แบน'};
 const OVERS=[[0,'ไม่มี'],[0.3,'30'],[0.6,'60'],[0.9,'90'],[1.2,'120']];
 const ROOF_VIEWS=[['skin','ผิวหลังคา'],['frame','โครงหลังคา'],['both','ทั้งคู่']];
-const newRoof=()=>({color:ROOF_COLORS[0],pitch:30,axis:'auto',mat:'tile',style:'gable',over:0.45,gutter:false,mode:'all',flip:false});
+const newRoof=()=>({color:ROOF_COLORS[0],pitch:30,axis:'auto',mat:'tile',style:'gable',over:0.45,gutter:false,mode:'all',flip:false,turbines:0,gableVent:false,soffit:false});
+const VENTS={block:'บล็อกช่องลม',louver:'ช่องเกล็ดระบายอากาศ'};
+const VENT_SIZE={block:[0.6,0.2,2.05],louver:[0.4,0.4,1.8]};
 const roofOf=p=>p.roof||(p.roof=newRoof());
 /* สายไฟ {id,pts,c}: เส้นบนแปลน วิ่งใต้ฝ้า จุดที่วางบนของไฟฟ้ามีสายลงไปหาของนั้น */
 const WIRE_KINDS={light:['ไฟแสงสว่าง','#e0a100'],plug:['ปลั๊ก','#d6453d'],other:['อื่น ๆ','#3f6fb5']};
@@ -898,7 +905,7 @@ function raySeg(px,py,dx,dy,ax,ay,bx,by){ const ex=bx-ax, ey=by-ay, den=dx*ey-dy
 /* ---------------- ข้อมูลแปลน ---------------- */
 let P=null, ALL={}, SEL=null, TOOL='select', AUTO=null;
 let PROB={}, STATS={};
-const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null,wires:true,roofView:'skin',night:false,wireKind:'light'};
+const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null,wires:true,roofView:'skin',night:false,wireKind:'light',openNext:''};
 const getItem=id=>P.items.find(o=>o.id===id);
 const getRoom=id=>P.rooms.find(o=>o.id===id);
 const getOpen=id=>P.openings.find(o=>o.id===id);
@@ -987,7 +994,7 @@ function cleanProject(p){
   const q=blankProject(String(p.name||'แปลนห้อง').slice(0,80));
   if(typeof p.id==='string'&&/^[A-Za-z0-9_.~:@+-]{1,60}$/.test(p.id)) q.id=p.id;
   q.updated=num(p.updated,Date.now()); q.wallH=clamp(num(p.wallH,2.5),1.8,5); q.wallT=clamp(num(p.wallT,0.1),0.04,0.4);
-  const rf=p.roof||{}; q.roof={color:validColor(rf.color)||ROOF_COLORS[0],pitch:clamp(num(rf.pitch,30),10,50),axis:rf.axis==='x'||rf.axis==='y'?rf.axis:'auto',mat:ROOF_MATS[rf.mat]?rf.mat:'tile',style:ROOF_STYLES[rf.style]?rf.style:'gable',over:clamp(num(rf.over,0.45),0,1.5),gutter:!!rf.gutter,mode:rf.mode==='room'?'room':'all',flip:!!rf.flip};
+  const rf=p.roof||{}; q.roof={color:validColor(rf.color)||ROOF_COLORS[0],pitch:clamp(num(rf.pitch,30),10,50),axis:rf.axis==='x'||rf.axis==='y'?rf.axis:'auto',mat:ROOF_MATS[rf.mat]?rf.mat:'tile',style:ROOF_STYLES[rf.style]?rf.style:'gable',over:clamp(num(rf.over,0.45),0,1.5),gutter:!!rf.gutter,mode:rf.mode==='room'?'room':'all',flip:!!rf.flip,turbines:clamp(Math.round(num(rf.turbines,0)),0,6),gableVent:!!rf.gableVent,soffit:!!rf.soffit};
   const src=Array.isArray(p.floors)&&p.floors.length?p.floors.slice(0,12):[{rooms:p.rooms,openings:p.openings,items:p.items}];
   q.floors=src.map((f,k)=>{
     const fl=newFloor(k); f=f||{}; if(typeof f.id==='string'&&f.id) fl.id=f.id.slice(0,40); if(f.name) fl.name=String(f.name).slice(0,40);
@@ -1000,7 +1007,7 @@ function cleanProject(p){
     const rid=new Set(fl.rooms.map(r=>r.id));
     (Array.isArray(f.openings)?f.openings:[]).forEach(o=>{
       if(!o||!rid.has(o.room)||(o.kind!=='door'&&o.kind!=='window')) return;
-      fl.openings.push({id:String(o.id||uid('o')),kind:o.kind,room:o.room,edge:Math.max(0,Math.floor(num(o.edge,0))),t:num(o.t,0.5),w:clamp(num(o.w,0.8),0.3,6),h:clamp(num(o.h,2),0.2,5),sill:clamp(num(o.sill,0),0,4),hinge:o.hinge?1:0,out:!!o.out});
+      fl.openings.push({id:String(o.id||uid('o')),kind:o.kind,room:o.room,edge:Math.max(0,Math.floor(num(o.edge,0))),t:num(o.t,0.5),w:clamp(num(o.w,0.8),0.3,6),h:clamp(num(o.h,2),0.2,5),sill:clamp(num(o.sill,0),0,4),hinge:o.hinge?1:0,out:!!o.out,vent:o.kind==='window'&&VENTS[o.vent]?o.vent:''});
     });
     (Array.isArray(f.items)?f.items:[]).forEach(it=>{
       if(!it) return; const type=C[it.type]?it.type:'box'; const c=C[type];
@@ -1277,7 +1284,9 @@ function draw2d(){
     const ax=w.cx-w.ux*o.w/2, ay=w.cy-w.uy*o.w/2, bx=w.cx+w.ux*o.w/2, by=w.cy+w.uy*o.w/2;
     if(o.kind==='window'){
       pathPoly([[ax,ay],[bx,by],[bx+w.nx*TT,by+w.ny*TT],[ax+w.nx*TT,ay+w.ny*TT]]); c.fillStyle=TK.plan; c.fill(); c.lineWidth=1.2; c.strokeStyle=sel?TK.accent:TK.wall; c.stroke();
-      const m0=w2s(ax+w.nx*TT/2,ay+w.ny*TT/2), m1=w2s(bx+w.nx*TT/2,by+w.ny*TT/2); c.beginPath(); c.moveTo(m0[0],m0[1]); c.lineTo(m1[0],m1[1]); c.lineWidth=1.6; c.stroke();
+      const m0=w2s(ax+w.nx*TT/2,ay+w.ny*TT/2), m1=w2s(bx+w.nx*TT/2,by+w.ny*TT/2);
+      if(o.vent==='louver'){ const n=Math.max(3,Math.round(o.w/0.06)); c.lineWidth=1.3; c.beginPath(); for(let i=0;i<n;i++){ const t=(i+0.5)/n, px=ax+(bx-ax)*t, py=ay+(by-ay)*t, A2=w2s(px-w.ux*0.02,py-w.uy*0.02), B2=w2s(px+w.ux*0.02+w.nx*TT,py+w.uy*0.02+w.ny*TT); c.moveTo(A2[0],A2[1]); c.lineTo(B2[0],B2[1]); } c.stroke(); }
+      else { if(o.vent==='block') c.setLineDash([3,3]); c.beginPath(); c.moveTo(m0[0],m0[1]); c.lineTo(m1[0],m1[1]); c.lineWidth=o.vent==='block'?3:1.6; c.stroke(); c.setLineDash([]); }
     } else {
       const base=o.out?TT:0, sd=o.out?1:-1;
       const H=o.hinge?[bx,by]:[ax,ay], O=o.hinge?[ax,ay]:[bx,by];
@@ -1353,7 +1362,7 @@ function draw2d(){
     c.setLineDash([3,4]); c.strokeStyle=TK.accent; c.lineWidth=1; if(D.hover) D.guides.forEach(gd=>{ const Q=w2s(gd[0],gd[1]), H=w2s(D.hover[0],D.hover[1]); c.beginPath(); c.moveTo(Q[0],Q[1]); c.lineTo(H[0],H[1]); c.stroke(); }); c.setLineDash([]);
   }
   if((TOOL==='rect'||TOOL==='shape')&&P2.g&&P2.g.type==='rect'&&P2.g.p1){ const a=P2.g.p0, b=P2.g.p1; const x0=Math.min(a[0],b[0]), y0=Math.min(a[1],b[1]), x1=Math.max(a[0],b[0]), y1=Math.max(a[1],b[1]); pathPoly(rectPts(x0,y0,x1-x0,y1-y0)); c.fillStyle=TK.accentSoft; c.fill(); c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); const M=w2s((x0+x1)/2,(y0+y1)/2); pill(cm(x1-x0)+' × '+cm(y1-y0),M[0],M[1],TK.accent,TK.accentInk); }
-  if((TOOL==='door'||TOOL==='window')&&HOV){ const e=edgeOf(HOV.room,HOV.i), w=TOOL==='door'?0.8:1.0, t=clamp(HOV.t,w/2,Math.max(w/2,e.len-w/2)); const ax=e.a[0]+e.ux*(t-w/2), ay=e.a[1]+e.uy*(t-w/2), bx=e.a[0]+e.ux*(t+w/2), by=e.a[1]+e.uy*(t+w/2); pathPoly([[ax,ay],[bx,by],[bx+e.nx*P.wallT,by+e.ny*P.wallT],[ax+e.nx*P.wallT,ay+e.ny*P.wallT]]); c.fillStyle=TK.accent; c.fill(); }
+  if((TOOL==='door'||TOOL==='window')&&HOV){ const e=edgeOf(HOV.room,HOV.i), w=TOOL==='door'?0.8:UI.openNext?VENT_SIZE[UI.openNext][0]:1.0, t=clamp(HOV.t,w/2,Math.max(w/2,e.len-w/2)); const ax=e.a[0]+e.ux*(t-w/2), ay=e.a[1]+e.uy*(t-w/2), bx=e.a[0]+e.ux*(t+w/2), by=e.a[1]+e.uy*(t+w/2); pathPoly([[ax,ay],[bx,by],[bx+e.nx*P.wallT,by+e.ny*P.wallT],[ax+e.nx*P.wallT,ay+e.ny*P.wallT]]); c.fillStyle=TK.accent; c.fill(); }
   updScale();
 }
 
@@ -1570,7 +1579,9 @@ function updDrawBarRoom(n){ const sh=TOOL==='shape'; $('dbTxt').textContent=n?('
 function addRectRoom(x0,y0,w,d){ const r=newRoom(rectPts(snapv(x0,0.05),snapv(y0,0.05),rd(w),rd(d))); P.rooms.push(r); setTool('select'); select({kind:'room',id:r.id}); commit(); toast('เพิ่ม '+r.name+' แล้ว · '+cm(w)+'×'+cm(d)+' ซม.'); }
 function placeOpening(kind,w){
   const nw=nearestWall(w[0],w[1],0.8); if(!nw){ toast('แตะใกล้ผนังห้อง'); return; }
-  const o={id:uid('o'),kind,room:nw.room.id,edge:nw.i,w:kind==='door'?0.8:1.0,h:kind==='door'?2.0:1.1,sill:kind==='door'?0:0.9,hinge:0,out:false,t:0};
+  const vt=kind==='window'&&VENTS[UI.openNext]?UI.openNext:'', vs=vt?VENT_SIZE[vt]:null;
+  const o={id:uid('o'),kind,room:nw.room.id,edge:nw.i,w:kind==='door'?0.8:vs?vs[0]:1.0,h:kind==='door'?2.0:vs?vs[1]:1.1,sill:kind==='door'?0:vs?vs[2]:0.9,hinge:0,out:false,t:0,vent:vt};
+  if(vt) o.sill=rd(Math.max(0.1,Math.min(o.sill,P.wallH-0.15-o.h)));
   if(o.w>nw.len-0.04) o.w=Math.max(0.3,rd(nw.len-0.04));
   if(o.kind==='window'&&o.sill+o.h>P.wallH-0.1) o.h=Math.max(0.3,rd(P.wallH-0.1-o.sill));
   o.t=rd(clamp(nw.t,o.w/2,Math.max(o.w/2,nw.len-o.w/2)));
@@ -1674,6 +1685,9 @@ function buildShell(){
       const jx=-sg*w.ux, jz=-sg*w.uy, sx=w.nx*sd, sz=w.ny*sd, dx=Math.cos(phi)*jx+Math.sin(phi)*sx, dz=Math.cos(phi)*jz+Math.sin(phi)*sz;
       const pv=new T.Group(); pv.position.set(hx,0,hz); pv.rotation.y=Math.atan2(-dz,dx); og.add(pv);
       const L=o.w-0.08; addBox(pv,L,o.h-0.05,0.035,'#a8794f',L/2,0.01,0); addBox(pv,0.1,0.02,0.09,'#9aa1a8',L-0.08,0.98,0,{metalness:.6,roughness:.35});
+    } else if(o.vent){
+      const room=fl.rooms.find(r=>r.id===o.room), vg=new T.Group(); vg.position.y=o.sill; fr.add(vg);
+      (o.vent==='block'?blockGrid:louver)(vg,o.w,Math.min(o.h,P.wallH-o.sill),TT+0.004,o.vent==='block'?(room?shade(room.wallColor,-0.06):'#e8e2d6'):'#dcd9d2');
     } else {
       const fc='#f4f4f2', y0=o.sill, h=Math.min(o.h,P.wallH-o.sill);
       addBox(fr,o.w,0.04,TT*0.8,fc,0,y0,0); addBox(fr,o.w,0.04,TT*0.8,fc,0,y0+h-0.04,0);
@@ -1688,6 +1702,32 @@ function buildShell(){
   R3.sun.position.set(cx+4,10+elevOf(P.cur),cz+6); R3.sun.target.position.set(cx,0,cz); const c=R3.sun.shadow.camera; c.left=-half; c.right=half; c.top=half; c.bottom=-half; c.near=1; c.far=60; c.updateProjectionMatrix();
   updateWallCut(true);
 }
+/* ช่องลมในผนัง: บล็อกช่องลม (ตารางลายดอก) และช่องเกล็ด (ใบเกล็ดเอียง + มุ้งลวด) วางจากฐาน y=0 กว้าง w สูง h หนา d */
+function ventFrame(g,w,h,d,color){ const t=0.03; addBox(g,w,t,d,color,0,0,0); addBox(g,w,t,d,color,0,h-t,0); addBox(g,t,h,d,color,-w/2+t/2,0,0); addBox(g,t,h,d,color,w/2-t/2,0,0); return t; }
+function blockGrid(g,w,h,d,color){
+  const t=ventFrame(g,w,h,d,color), n=Math.max(1,Math.round(w/0.2)), m=Math.max(1,Math.round(h/0.2)), cw=w/n, ch=h/m, s=Math.min(cw,ch)*0.38;
+  for(let i=1;i<n;i++) addBox(g,t*0.8,h,d,color,-w/2+cw*i,0,0);
+  for(let j=1;j<m;j++) addBox(g,w,t*0.8,d,color,0,ch*j-t*0.4,0);
+  for(let i=0;i<n;i++) for(let j=0;j<m;j++){ const b=addBox(g,s,s,d*0.5,color,-w/2+cw*(i+0.5),ch*(j+0.5)-s/2,0); b.rotation.z=Math.PI/4; }
+}
+function louver(g,w,h,d,color){
+  const t=ventFrame(g,w,h,d,color), n=Math.max(2,Math.round((h-2*t)/0.05));
+  for(let i=0;i<n;i++){ const s=addBox(g,w-2*t,0.006,d*0.9,shade(color,-0.08),0,t+(h-2*t)*(i+0.5)/n-0.003,0); s.rotation.x=-0.7; }
+  addBox(g,w-2*t,h-2*t,0.004,'#3a3d42',0,t,-d*0.42,{transparent:true,opacity:0.25,depthWrite:false});
+}
+/* ลูกหมุนระบายความร้อนบนหลังคา (หัวหมุนรอบแกนตั้ง) */
+function turbine(g,p){
+  const t=new T.Group(); t.position.copy(p); g.add(t); const o={metalness:.55,roughness:.38};
+  addCyl(t,0.12,0.15,0.3,'#b9bfc5',0,-0.06,0,o,16);
+  const head=new T.Group(); head.position.y=0.24; head.userData.spin={ax:'y',v:2.4,roof:1}; t.add(head);
+  addCyl(head,0.23,0.23,0.02,'#c9ced3',0,0,0,o,20);
+  for(let i=0;i<18;i++){ const a=i/18*Math.PI*2, f=addBox(head,0.012,0.26,0.09,'#d5dadf',Math.cos(a)*0.21,0.02,Math.sin(a)*0.21,o); f.rotation.y=-a+0.6; }
+  addBlob(head,0.22,'#c9ced3',0,0.28,0,1,0.42,1,o);
+}
+/* ลายรูระบายอากาศของฝ้าชายคา */
+let VCV=null;
+function ventCanvas(){ if(VCV) return VCV; const cv=document.createElement('canvas'); cv.width=cv.height=64; const x=cv.getContext('2d'); x.fillStyle='#f1efea'; x.fillRect(0,0,64,64); x.fillStyle='#8f8a80'; for(let i=0;i<4;i++) for(let j=0;j<4;j++){ x.beginPath(); x.arc(8+i*16,8+j*16,2.6,0,Math.PI*2); x.fill(); } return VCV=cv; }
+function soffitBox(g,w,d,x,y,z){ const k='soff'+w.toFixed(2)+'x'+d.toFixed(2); if(!TEX[k]){ const t=new T.CanvasTexture(ventCanvas()); t.wrapS=t.wrapT=T.RepeatWrapping; t.repeat.set(w/0.25,d/0.25); TEX[k]=new T.MeshStandardMaterial({map:t,roughness:0.9}); } const m=new T.Mesh(new T.BoxGeometry(w,0.012,d),TEX[k]); m.position.set(x,y,z); m.receiveShadow=true; g.add(m); return m; }
 function roofMat(c,kind){
   const k='roof'+(kind||'tile')+c; if(TEX[k]) return TEX[k];
   const t=new T.CanvasTexture(roofCanvas(c,kind)); t.wrapS=t.wrapT=T.RepeatWrapping; t.repeat.set(1/1.0,1/0.9); t.anisotropy=R3.renderer.capabilities.getMaxAnisotropy();
@@ -1766,6 +1806,13 @@ function roofOver(g,rooms,style){
       [-1,1].forEach(e=>{ const a=e*Math.max(0,Lh-0.15), y1=Ye-0.35;
         rod(g,W(a,cOut,Ye-0.12),W(a,cOut,y1),0.035,gm); rod(g,W(a,cOut,y1),W(a,cWall,y1-Math.abs(cOut-cWall)*0.3),0.035,gm); rod(g,W(a,cWall,y1-Math.abs(cOut-cWall)*0.3),W(a,cWall,down),0.035,gm); }); });
   }
+  /* ระบายอากาศ: ลูกหมุนเรียงตามแนวสัน · ฝ้าชายคาแบบมีรู */
+  const nT=rf.turbines|0;
+  if(skin&&nT>0&&!anySee) for(let i=0;i<nT;i++){ const a=nT===1?0:-Lh*0.6+1.2*Lh*i/(nT-1), c=shed?-fl*hw*0.4:0; turbine(g,W(a,c,Y(a,c)+(gable||(hip&&Math.abs(a)<=r)?0.06:0))); }
+  if(skin&&rf.soffit&&!flat&&o>0.05){
+    (shed?[[fl,Ye],[-fl,Y(0,-fl*B)]]:[[-1,Ye],[1,Ye]]).forEach(([s,ye])=>{ const p=W(0,s*(hw+B)/2,ye-0.13); soffitBox(g,ax?2*A:o,ax?o:2*A,p.x,p.y,p.z); });
+    if(hip) [-1,1].forEach(e=>{ const p=W(e*(Lh+A)/2,0,Ye-0.133); soffitBox(g,ax?o:2*B,ax?2*B:o,p.x,p.y,p.z); });
+  }
   /* โครงหลังคา: จันทัน แป อกไก่ ขื่อ ดั้ง อเส (ใต้ผิว) */
   if(frame){
     const steps=(lo,hi,sp)=>{ const n=Math.max(1,Math.round((hi-lo)/sp)), out=[]; for(let i=0;i<=n;i++) out.push(lo+(hi-lo)*i/n); return out; }, pc=shade(wood,-0.1);
@@ -1803,6 +1850,7 @@ function roofOver(g,rooms,style){
       const mesh=SEE(kind)||meshWalls, see=SEE(kind)?kind:rooms[0].wallType;
       const m=new T.Mesh(new T.ExtrudeGeometry(shp,{depth:TT,bevelEnabled:false}),mesh?[seeMat(see,5,5),mat(wood,{roughness:0.8})]:[mat(wc,{roughness:0.95}),mat(shade(wc,-0.2),{roughness:0.9})]);
       if(ax){ m.rotation.y=Math.PI/2; m.position.set(cx+a0,0,cz); } else m.position.set(cx,0,cz+a0); m.castShadow=!mesh; m.receiveShadow=true; g.add(m);
+      if(gable&&rf.gableVent&&!mesh){ const vh=Math.min(0.45,(Yr-H)*0.4), vw=Math.min(0.8,hw*0.5); if(vh>0.12) [a0-0.015,a0+TT+0.015].forEach(av=>{ const vg=new T.Group(); vg.position.copy(W(av,0,H+(Yr-H)*0.4-vh/2)); vg.rotation.y=ax?Math.PI/2:0; g.add(vg); louver(vg,vw,vh,0.05,shade(wc,-0.3)); }); }
       if(mesh&&gable){ const c0=W(a0+TT/2,0,0), len=Math.hypot(hw,Yr-H); [-1,1].forEach(s=>{ const rr=addBox(g,ax?0.06:len,0.06,ax?len:0.06,wood,0,0,0); rr.position.copy(W(a0+TT/2,s*hw/2,(H+Yr)/2)); if(ax) rr.rotation.x=s*Math.atan2(Yr-H,hw); else rr.rotation.z=-s*Math.atan2(Yr-H,hw); }); addBox(g,0.06,Yr-H,0.06,wood,c0.x,H,c0.z); }
     });
     if(shed){ const mesh=meshWalls, p=W(0,-fl*(hw-TT/2),H), m=addBox(g,ax?2*Lh:TT,Yr-H-0.05,ax?TT:2*Lh,wc,p.x,H-0.05,p.z); if(mesh) m.material=seeMat(rooms[0].wallType,5,5); }
@@ -1824,6 +1872,7 @@ function syncItems3d(){
   Object.keys(R3.items).forEach(id=>{ if(!seen[id]){ R3.itemsRoot.remove(R3.items[id].g); disposeTree(R3.items[id].g); delete R3.items[id]; } });
   const so=selObj();
   if(so&&SEL.kind==='item'){ const h=itemH(so); R3.selBox.visible=true; R3.selBox.position.set(so.x,elevOf(P.cur)+(so.elev||0)+h/2,so.y); R3.selBox.scale.set(so.w+0.04,h+0.04,so.d+0.04); R3.selBox.rotation.y=-so.rot*Math.PI/180; } else R3.selBox.visible=false;
+  R3.spin=[]; [R3.itemsRoot,R3.roof].forEach(root=>root.traverse(x=>{ if(x.userData&&x.userData.spin) R3.spin.push(x); }));
 }
 function shapeMat(s){
   const k='shape'+s.mat+s.color; if(TEX[k]) return TEX[k]; let m;
@@ -2030,7 +2079,8 @@ function pgEdit(){
     <div class="btnrow sep"><button type="button" class="btn" data-act="dupRoom">${ic('dup',16)}ทำซ้ำห้อง</button><button type="button" class="btn danger${UI.arm==='room'?' armed':''}" data-act="delRoom">${ic('trash',16)}${UI.arm==='room'?'แตะอีกครั้งเพื่อลบห้องและของในห้อง':'ลบห้อง'}</button></div>`;
   }
   const door=o.kind==='door';
-  return `<div class="ttl">${door?'ประตู':'หน้าต่าง'}</div>
+  return `<div class="ttl">${door?'ประตู':(VENTS[o.vent]||'หน้าต่าง')}</div>
+  ${door?'':`<div class="seg sm" style="margin-top:8px;flex-wrap:wrap">${[['','หน้าต่าง'],['block','บล็อกช่องลม'],['louver','ช่องเกล็ด']].map(([k,t])=>`<button type="button" data-act="vtype" data-v="${k}" aria-pressed="${(o.vent||'')===k}">${t}</button>`).join('')}</div>`}
   <h3>ขนาด (ซม.)</h3>
   <div class="f3"><label class="f" for="o-w">กว้าง<input id="o-w" type="number" inputmode="numeric" min="30" value="${cm(o.w)}"></label><label class="f" for="o-h">สูง<input id="o-h" type="number" inputmode="numeric" min="20" value="${cm(o.h)}"></label>${door?'':`<label class="f" for="o-sill">สูงจากพื้น<input id="o-sill" type="number" inputmode="numeric" min="0" value="${cm(o.sill)}"></label>`}</div>
   ${door?`<h3>ทางเปิด</h3><div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="flipOut">${ic('flip',16)}${o.out?'เปิดออกนอกห้อง':'เปิดเข้าในห้อง'}</button><button type="button" class="btn" data-act="flipHinge">สลับข้างบานพับ</button></div>`:''}
@@ -2051,7 +2101,7 @@ function pgInfo(){
   <h3>ผนังทุกห้อง (ซม.)</h3>
   <div class="f3"><label class="f" for="p-wh">สูง<input id="p-wh" type="number" inputmode="numeric" min="180" value="${cm(P.wallH)}"></label><label class="f" for="p-wt">หนา<input id="p-wt" type="number" inputmode="numeric" min="4" value="${cm(P.wallT)}"></label></div>
   <h3>ไฟฟ้าทั้งบ้าน</h3>
-  ${es.any?`<div class="kv"><span>ปลั๊ก</span><b>${es.n.plug} จุด</b><span>สวิตช์</span><b>${es.n.switch} จุด</b><span>หลอดไฟ/โคม</span><b>${es.n.light} ดวง</b><span>ตู้ไฟ</span><b>${es.n.panel} ตู้</b>${es.n.other?`<span>พัดลมเพดาน/อื่น ๆ</span><b>${es.n.other}</b>`:''}${Object.keys(WIRE_KINDS).filter(k=>es.len[k]>0).map(k=>`<span>สาย${WIRE_KINDS[k][0]}</span><b>${f2(es.len[k])} ม.</b>`).join('')}<span>สายไฟรวม</span><b>${f2(es.tot)} ม.</b>${es.tot>0?`<span>ควรซื้อเผื่อ (+15%)</span><b>${Math.ceil(es.tot*1.15)} ม.</b>`:''}</div>`:`<p class="muted small" style="margin:0">ยังไม่มีของไฟฟ้าในแปลนนี้</p>`}
+  ${es.any?`<div class="kv"><span>ปลั๊ก</span><b>${es.n.plug} จุด</b><span>สวิตช์</span><b>${es.n.switch} จุด</b><span>หลอดไฟ/โคม</span><b>${es.n.light} ดวง</b><span>ตู้ไฟ</span><b>${es.n.panel} ตู้</b>${es.n.other?`<span>พัดลม/อื่น ๆ</span><b>${es.n.other}</b>`:''}${Object.keys(WIRE_KINDS).filter(k=>es.len[k]>0).map(k=>`<span>สาย${WIRE_KINDS[k][0]}</span><b>${f2(es.len[k])} ม.</b>`).join('')}<span>สายไฟรวม</span><b>${f2(es.tot)} ม.</b>${es.tot>0?`<span>ควรซื้อเผื่อ (+15%)</span><b>${Math.ceil(es.tot*1.15)} ม.</b>`:''}</div>`:`<p class="muted small" style="margin:0">ยังไม่มีของไฟฟ้าในแปลนนี้</p>`}
   <label class="chk" style="margin-top:6px"><input type="checkbox" id="u-wires" ${UI.wires?'checked':''}> แสดงสายไฟ</label>
   <div class="btnrow"><button type="button" class="btn" data-act="elecCat">${ic('add',16)}เพิ่มปลั๊ก สวิตช์ หลอดไฟ</button><button type="button" class="btn" data-act="wireTool">${ic('bolt',16)}ลากสายไฟ</button></div>
   <h3>หลังคา (เห็นในภาพ 3D)</h3>
@@ -2069,6 +2119,12 @@ function pgInfo(){
   <p class="muted small" style="margin:6px 0 4px">ดูแบบ</p>
   <div class="seg sm">${ROOF_VIEWS.map(p=>`<button type="button" data-act="rview" data-v="${p[0]}" aria-pressed="${UI.roofView===p[0]}">${p[1]}</button>`).join('')}</div>
   <div class="btnrow"><button type="button" class="btn" data-act="roofAxis">${ic('rotr',16)}หมุนแนวสันหลังคา</button>${rf.style==='shed'||rf.mode==='room'?`<button type="button" class="btn" data-act="rflip">${ic('flip',16)}สลับด้านสูงของเพิง</button>`:''}</div>
+  <h3>ระบายอากาศ</h3>
+  <div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="addVent" data-v="block">${ic('window',16)}ใส่บล็อกช่องลม</button><button type="button" class="btn" data-act="addVent" data-v="louver">${ic('window',16)}ใส่ช่องเกล็ด</button><button type="button" class="btn" data-act="ventCat">${ic('add',16)}พัดลมดูดอากาศ</button></div>
+  <p class="muted small" style="margin:10px 0 4px">ลูกหมุนระบายความร้อนบนหลังคา</p>
+  <div class="seg sm">${[0,1,2,3,4].map(n=>`<button type="button" data-act="rturb" data-v="${n}" aria-pressed="${(rf.turbines|0)===n}">${n?n+' ลูก':'ไม่มี'}</button>`).join('')}</div>
+  <label class="chk" style="margin-top:6px"><input type="checkbox" id="u-gvent" ${rf.gableVent?'checked':''}> ช่องระบายหน้าจั่ว (หลังคาจั่ว)</label>
+  <label class="chk"><input type="checkbox" id="u-soffit" ${rf.soffit?'checked':''}> ฝ้าชายคาระบายอากาศ</label>
   <h3>แสดงบนแปลน</h3>
   <label class="chk"><input type="checkbox" id="u-labels" ${UI.labels?'checked':''}> ชื่อของ</label>
   <label class="chk"><input type="checkbox" id="u-dims" ${UI.dims?'checked':''}> ความยาวผนัง</label>
@@ -2080,6 +2136,7 @@ function pgInfo(){
     <li>3D: ลากเพื่อหมุนรอบ สองนิ้วหรือคลิกขวาเพื่อเลื่อน กด "เดินดู" เพื่อเดินในห้อง</li>
     <li>ปั้นรูปทรง (แบบ SketchUp): แตะวางมุมหรือลากเป็นสี่เหลี่ยม แล้วใน 3D ลากด้านบนขึ้นลงเพื่อดัน/ดึงความสูง</li>
     <li>ไฟฟ้า: วางปลั๊ก สวิตช์ หลอดไฟ ตู้ไฟ จากหมวด "ไฟฟ้า" แล้วกด "สายไฟ" แตะทีละจุดจากตู้ไฟไปหาของ แตะจุดสุดท้ายซ้ำเพื่อจบสาย · ใน 3D กด "เปิดไฟ" ดูตอนกลางคืน</li>
+    <li>ระบายอากาศ: กด "ใส่บล็อกช่องลม" หรือ "ใส่ช่องเกล็ด" แล้วแตะที่ผนัง · พัดลมดูดอากาศอยู่หมวด "ระบายอากาศ" · ลูกหมุน ช่องหน้าจั่ว ฝ้าชายคา ตั้งได้ที่หัวข้อ "ระบายอากาศ"</li>
     <li>หลังคา: เลือกจั่ว ปั้นหยา เพิงหมาแหงน หรือแบน ปรับชายคา ใส่รางน้ำ และดูโครงหลังคาได้ที่หัวข้อ "หลังคา" ด้านบน</li>
     <li>หลายชั้น: แตะ "ชั้น 1 / ชั้น 2" มุมซ้ายบนเพื่อสลับ กด "+ ชั้น" เพื่อเพิ่มชั้น (คอม: PageUp / PageDown)</li>
     <li>แอปเซฟให้เองทุกครั้งที่แก้ กด "บันทึก" เพื่อเซฟทันที · กด "PDF" ได้ไฟล์แปลน ภาพ 3D และรายการของ</li>
@@ -2202,6 +2259,10 @@ function act(a,el){
     case 'wkind': if(o&&SEL.kind==='wire'){ o.c=v; UI.wireKind=v; commit(); } break;
     case 'delWPt': if(o&&SEL.kind==='wire'&&SEL.i!=null&&o.pts.length>2){ o.pts.splice(SEL.i,1); SEL.i=null; commit(); } break;
     case 'elecCat': UI.cat='elec'; UI.q=''; setTab('add',true); break;
+    case 'ventCat': UI.cat='vent'; UI.q=''; setTab('add',true); break;
+    case 'addVent': UI.openNext=v; setTool('window'); if(UI.view==='3d') setView(isWide()?'split':'2d'); break;
+    case 'vtype': if(o&&SEL.kind==='open'&&o.kind==='window'){ o.vent=v; commit(); if(v&&R3.ok&&UI.view==='2d') toast('ดู'+VENTS[v]+'ได้ในภาพ 3D'); } break;
+    case 'rturb': roofOf(P).turbines=+v; commit(); setRoof(true); break;
     case 'wireTool': setTool('wire'); break;
   }
 }
@@ -2254,6 +2315,7 @@ function onField(el,final){
   if(id==='u-labels'||id==='u-dims'){ UI[id==='u-labels'?'labels':'dims']=el.checked; savePrefs(); need2=true; return; }
   if(id==='u-roof'){ setRoof(el.checked); return; }
   if(id==='u-gutter'){ roofOf(P).gutter=el.checked; commit(); setRoof(true); return; }
+  if(id==='u-gvent'||id==='u-soffit'){ roofOf(P)[id==='u-gvent'?'gableVent':'soffit']=el.checked; commit(); setRoof(true); return; }
   if(id==='u-wires'){ UI.wires=el.checked; savePrefs(); need2=true; sync3d(); return; }
   if(/^fl-\d+$/.test(id)){ const k=+id.slice(3); if(P.floors[k]){ P.floors[k].name=el.value.trim().slice(0,40)||('ชั้น '+(k+1)); renderFloorBar(); if(final) commit(); } return; }
   if(id==='p-wh'){ const v=numIn(el,180,500); if(v!=null){ const old=P.wallH; P.wallH=v/100; P.openings.forEach(x=>{ if(x.kind==='door') x.h=Math.min(x.h,P.wallH-0.05); }); P.floors.forEach(f=>f.items.forEach(it=>{ if(C[it.type].ceil&&Math.abs((it.elev||0)+it.h-old)<0.03) it.elev=rd(Math.max(0,P.wallH-it.h)); })); live(); } }
@@ -2286,15 +2348,16 @@ function setTool(t){
   if(t==='add'){ setTool('select'); setTab('add',true); return; }
   TOOL=t; D.pts=[]; D.hover=null;
   if(t==='wire'&&!UI.wires){ UI.wires=true; savePrefs(); sync3d(); }
+  if(t!=='window') UI.openNext='';
   HOV=null; if(t!=='select'&&SEL){ SEL=null; renderPanel(); }
   document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t?'true':'false'));
   if(t!=='select'&&UI.view==='3d') setView(isWide()?'split':'2d');
-  let h=''; if(t==='rect') h='ลากเพื่อวาดห้องสี่เหลี่ยม หรือแตะเพื่อวางห้อง 3×3 ม.'; else if(t==='door') h='แตะที่ผนังเพื่อใส่ประตู'; else if(t==='window') h='แตะที่ผนังเพื่อใส่หน้าต่าง';
+  let h=''; if(t==='rect') h='ลากเพื่อวาดห้องสี่เหลี่ยม หรือแตะเพื่อวางห้อง 3×3 ม.'; else if(t==='door') h='แตะที่ผนังเพื่อใส่ประตู'; else if(t==='window') h='แตะที่ผนังเพื่อใส่'+(VENTS[UI.openNext]||'หน้าต่าง');
   $('hint').textContent=h; $('hint').hidden=!h; $('drawBar').hidden=!isDraw(); $('scaleBar').hidden=t!=='select';
   if(isDraw()) updDrawBar();
   cv2.style.cursor=t==='select'?'grab':'crosshair'; updateFab(); need2=true;
 }
-document.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
+document.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>{ UI.openNext=''; setTool(b.dataset.tool); }));
 function setView(v){
   if(v==='split'&&!isWide()) v='2d';
   if(v!=='2d'&&UI.view==='2d'&&R3.ok) need3=true;
@@ -2650,7 +2713,7 @@ let lastT=performance.now();
 function loop(t){
   requestAnimationFrame(loop); const dt=Math.min(0.05,Math.max(0,(t-lastT)/1000)); lastT=t;
   if(!UI.home){
-    if(R3.ok&&UI.view!=='2d'){ if(WK.on&&stepWalk(dt)) need3=true; if(need3){ need3=false; updateWallCut(); R3.renderer.render(R3.scene,R3.cam); } }
+    if(R3.ok&&UI.view!=='2d'){ if(WK.on&&stepWalk(dt)) need3=true; if(R3.spin&&!document.hidden) R3.spin.forEach(o=>{ const s=o.userData.spin; if(s.roof&&!R3.roof.visible) return; o.rotation[s.ax]+=s.v*dt; need3=true; }); if(need3){ need3=false; updateWallCut(); R3.renderer.render(R3.scene,R3.cam); } }
     if(need2&&UI.view!=='3d') draw2d();
   }
   if(R3.ok&&THQ.length) processThumbs();
