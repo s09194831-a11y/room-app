@@ -62,7 +62,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .seg{display:inline-flex;flex:none;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:2px;gap:2px}
 .seg button{height:30px;padding:0 11px;border-radius:7px;font:600 13px var(--font-display);color:var(--muted);white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
-.tools{grid-area:tools;display:flex;flex-direction:column;gap:6px}
+.tools{grid-area:tools;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0}
 .tool{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 7px;border-radius:10px;color:var(--muted);font-size:11.5px;line-height:1.2;text-align:center}
 .tool:hover{background:var(--surface)}
 .tool[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
@@ -128,6 +128,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .status{margin-top:8px;padding:7px 10px;border-radius:8px;font-size:13px}
 .status.ok{background:var(--accent-soft);color:var(--accent)}
 .status.bad{background:var(--warn-soft);color:var(--warn)}
+.rng{display:flex;align-items:center;gap:10px;font-size:13px}.rng span{white-space:nowrap}.rng input{flex:1;accent-color:var(--accent)}
+.vchips{display:flex;flex-wrap:wrap;gap:6px}.vchip{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}.vchip button{padding:5px 11px;font-size:13px}.vchip button+button{border-left:1px solid var(--line);color:var(--muted);padding:5px 9px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:10px;font-size:13px}
 .kv b{font:500 14px var(--font-num);text-align:right}
 .walls{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
@@ -190,8 +192,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"bar" "stage" "side" "tools";gap:8px;padding-block:8px}
   .brand .bname,.pstate,.seg .wide{display:none}
   .brand{padding-right:0}
-  .tools{flex-direction:row;gap:2px}
-  .tool{flex:1;min-width:0;padding:6px 1px 5px;font-size:10.5px}
+  .tools{flex-direction:row;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .tools::-webkit-scrollbar{display:none}
+  .tool{flex:1 0 50px;min-width:50px;padding:6px 1px 5px;font-size:10.5px}
   .sheetTog{display:grid}
   .side[data-open="0"] .sbody{display:none}
   .side[data-open="0"]{border-radius:12px}
@@ -223,6 +226,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     <button class="tool" type="button" data-tool="door" data-ic="door"><span>ประตู</span></button>
     <button class="tool" type="button" data-tool="window" data-ic="window"><span>หน้าต่าง</span></button>
     <button class="tool" type="button" data-tool="wire" data-ic="bolt"><span>สายไฟ</span></button>
+    <button class="tool" type="button" data-tool="measure" data-ic="ruler"><span>วัดระยะ</span></button>
+    <button class="tool" type="button" data-tool="text" data-ic="text"><span>ข้อความ</span></button>
     <button class="tool" type="button" data-tool="add" data-ic="add"><span>เพิ่มของ</span></button>
   </nav>
 
@@ -293,6 +298,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 </section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="fileIn" accept="application/json,.json" hidden>
+<input type="file" id="bgIn" accept="image/*" hidden>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -348,6 +354,10 @@ const IC={
   save:'<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
   cube:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
   bolt:'<path d="M13.5 2.5L5 13.5h6.5l-1 8 8.5-11h-6.5z"/>',
+  ruler:'<path d="M3 16.5L16.5 3l4.5 4.5L7.5 21z"/><path d="M7 12.5l1.5 1.5M9.5 10l2.5 2.5M12 7.5l1.5 1.5M14.5 5l2.5 2.5"/>',
+  text:'<path d="M5 7V4.5h14V7M12 4.5V20M9 20h6"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  image:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4.5 3.5"/>',
   bulb:'<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
   grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   pdf:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 16.5v-4h1.6a1.3 1.3 0 0 1 0 2.6H9M13.5 16.5v-4h1a2 2 0 0 1 0 4z"/>'
@@ -905,21 +915,25 @@ function raySeg(px,py,dx,dy,ax,ay,bx,by){ const ex=bx-ax, ey=by-ay, den=dx*ey-dy
 /* ---------------- ข้อมูลแปลน ---------------- */
 let P=null, ALL={}, SEL=null, TOOL='select', AUTO=null;
 let PROB={}, STATS={};
-const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null,wires:true,roofView:'skin',night:false,wireKind:'light',openNext:''};
+const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null,wires:true,roofView:'skin',night:false,wireKind:'light',openNext:'',shapeMode:'poly',arrN:3,arrGap:10,sunHour:10};
 const getItem=id=>P.items.find(o=>o.id===id);
 const getRoom=id=>P.rooms.find(o=>o.id===id);
 const getOpen=id=>P.openings.find(o=>o.id===id);
 const getShape=id=>P.shapes.find(o=>o.id===id);
 const getWire=id=>P.wires.find(o=>o.id===id);
-function selObj(){ if(!SEL||!P) return null; return SEL.kind==='item'?getItem(SEL.id):SEL.kind==='room'?getRoom(SEL.id):SEL.kind==='shape'?getShape(SEL.id):SEL.kind==='wire'?getWire(SEL.id):getOpen(SEL.id); }
+function selObj(){ if(!SEL||!P) return null; return SEL.kind==='item'?getItem(SEL.id):SEL.kind==='room'?getRoom(SEL.id):SEL.kind==='shape'?getShape(SEL.id):SEL.kind==='wire'?getWire(SEL.id):SEL.kind==='dim'?getDim(SEL.id):SEL.kind==='label'?getLabel(SEL.id):SEL.kind==='bg'?BG.data:getOpen(SEL.id); }
 function roomAt(x,y){ for(let i=P.rooms.length-1;i>=0;i--) if(pip(x,y,P.rooms[i].pts)) return P.rooms[i]; return null; }
 /* แปลนหนึ่งอันมีได้หลายชั้น: p.floors[k] = {rooms, openings, items}; p.rooms / p.openings / p.items ชี้ไปที่ชั้นที่เปิดอยู่ (p.cur) */
 const SLAB=0.2;
-function newFloor(k){ return {id:uid('f'),name:'ชั้น '+(k+1),rooms:[],openings:[],items:[],shapes:[],wires:[]}; }
+function newFloor(k){ return {id:uid('f'),name:'ชั้น '+(k+1),rooms:[],openings:[],items:[],shapes:[],wires:[],dims:[],labels:[]}; }
 /* รูปทรงที่ปั้นเอง (แบบ SketchUp): {id,name,pts,h,elev,color,mat} พื้นรูปหลายเหลี่ยม ดึงขึ้นสูง h จากระดับ elev */
-const SHAPE_MATS={plain:'สีเรียบ',wood:'ไม้',concrete:'ปูน',glass:'กระจก'};
+const SHAPE_MATS={plain:'สีเรียบ',wood:'ไม้',concrete:'ปูน',glass:'กระจก',grass:'หญ้า',water:'น้ำ',paving:'ทางเดิน',gravel:'กรวด'};
+const SURFACE_COLOR={grass:'#6aa84f',water:'#4a90c8',paving:'#c9c2b5',gravel:'#a39c90'};
+/* ลายผนัง (ทาสีทีละด้านได้: room.walls[i] = {c:สี, p:ลาย}) */
+const WALL_PATS={plain:'เรียบ',brick:'อิฐ',stripe:'ลายทาง',tile:'กระเบื้อง',wood:'ไม้'};
+const WALL_PAINT=['#f4f2ed','#ece7dc','#e6ebe4','#e3e9f0','#f0e4d8','#efe3bf','#c2263f','#d0763a','#e8b931','#2f7d6b','#3f6fb5','#7a5236','#5b6670','#2b2d31'];
 const SHAPE_COLORS=['#d9d4ca','#f3f1ec','#b58a5f','#7a5236','#9aa1a8','#5b6670','#2b2d31','#3f6fb5','#2f7d6b','#6aa84f','#c2263f','#e8b931'];
-function attachFloors(p){ ['rooms','openings','items','shapes','wires'].forEach(k=>Object.defineProperty(p,k,{configurable:true,enumerable:false,get(){ return this.floors[this.cur][k]; },set(v){ this.floors[this.cur][k]=v; }})); return p; }
+function attachFloors(p){ ['rooms','openings','items','shapes','wires','dims','labels'].forEach(k=>Object.defineProperty(p,k,{configurable:true,enumerable:false,get(){ return this.floors[this.cur][k]; },set(v){ this.floors[this.cur][k]=v; }})); return p; }
 function blankProject(name){ return attachFloors({v:2,id:uid('p'),name:name||'แปลนห้อง',updated:Date.now(),wallH:2.5,wallT:0.1,roof:newRoof(),floors:[newFloor(0)],cur:0}); }
 const elevOf=k=>k*(P.wallH+SLAB);
 const curFloor=()=>P.floors[P.cur];
@@ -989,6 +1003,7 @@ function mushroomProject(){
 }
 const validColor=c=>typeof c==='string'&&/^#[0-9a-fA-F]{6}$/.test(c)?c:null;
 const num=(v,d)=>{ v=+v; return isFinite(v)?v:d; };
+function cleanWalls(w,n){ const o={}; if(w&&typeof w==='object') Object.keys(w).forEach(k=>{ const i=+k, v=w[k]; if(Number.isInteger(i)&&i>=0&&i<n&&v&&(validColor(v.c)||WALL_PATS[v.p])){ o[i]={}; if(validColor(v.c)) o[i].c=v.c; if(WALL_PATS[v.p]) o[i].p=v.p; } }); return o; }
 function cleanProject(p){
   if(!p||typeof p!=='object') return null;
   const q=blankProject(String(p.name||'แปลนห้อง').slice(0,80));
@@ -1002,7 +1017,7 @@ function cleanProject(p){
       if(!r||!Array.isArray(r.pts)) return;
       const pts=r.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]);
       if(pts.length<3) return;
-      fl.rooms.push({id:String(r.id||uid('r')),name:String(r.name||'ห้อง').slice(0,60),pts,floor:FLOOR_NAMES[r.floor]?r.floor:'wood',floorColor:validColor(r.floorColor)||FLOOR_COLORS[0],wallColor:validColor(r.wallColor)||WALL_COLORS[0],wallType:WALL_TYPES[r.wallType]?r.wallType:'solid',roof:(ROOF_STYLES[r.roof]||r.roof==='none')?r.roof:''});
+      fl.rooms.push({id:String(r.id||uid('r')),name:String(r.name||'ห้อง').slice(0,60),pts,floor:FLOOR_NAMES[r.floor]?r.floor:'wood',floorColor:validColor(r.floorColor)||FLOOR_COLORS[0],wallColor:validColor(r.wallColor)||WALL_COLORS[0],wallType:WALL_TYPES[r.wallType]?r.wallType:'solid',roof:(ROOF_STYLES[r.roof]||r.roof==='none')?r.roof:'',wallPat:WALL_PATS[r.wallPat]?r.wallPat:'plain',walls:cleanWalls(r.walls,pts.length)});
     });
     const rid=new Set(fl.rooms.map(r=>r.id));
     (Array.isArray(f.openings)?f.openings:[]).forEach(o=>{
@@ -1024,9 +1039,14 @@ function cleanProject(p){
       if(!w||!Array.isArray(w.pts)) return; const pts=w.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]); if(pts.length<2) return;
       fl.wires.push({id:String(w.id||uid('w')),pts,c:WIRE_KINDS[w.c]?w.c:'light'});
     });
+    const P2v=a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1]);
+    (Array.isArray(f.dims)?f.dims:[]).forEach(d=>{ if(d&&P2v(d.a)&&P2v(d.b)) fl.dims.push({id:String(d.id||uid('d')),a:[+d.a[0],+d.a[1]],b:[+d.b[0],+d.b[1]]}); });
+    (Array.isArray(f.labels)?f.labels:[]).forEach(l=>{ if(l&&isFinite(l.x)&&isFinite(l.y)) fl.labels.push({id:String(l.id||uid('t')),x:+l.x,y:+l.y,text:String(l.text||'ข้อความ').slice(0,80),size:clamp(num(l.size,0.25),0.05,2),color:validColor(l.color)||'#1d282d'}); });
     return fl;
   });
   q.cur=clamp(Math.floor(num(p.cur,0)),0,q.floors.length-1);
+  q.north=((num(p.north,0)%360)+360)%360;
+  q.views=(Array.isArray(p.views)?p.views:[]).slice(0,12).filter(v=>v&&v.cam).map(v=>({id:String(v.id||uid('v')),name:String(v.name||'มุมกล้อง').slice(0,40),floor:clamp(Math.floor(num(v.floor,0)),0,q.floors.length-1),roof:!!v.roof,cam:['tx','ty','tz','yaw','pitch','dist'].reduce((o,k)=>(o[k]=num(v.cam[k],0),o),{})}));
   return q;
 }
 
@@ -1118,14 +1138,14 @@ function computeStats(){
 
 /* ---------------- ย้อนกลับ ---------------- */
 const HIST={u:[],r:[],cur:''};
-const snapState=()=>JSON.stringify({name:P.name,wallH:P.wallH,wallT:P.wallT,roof:roofOf(P),floors:P.floors});
+const snapState=()=>JSON.stringify({name:P.name,wallH:P.wallH,wallT:P.wallT,roof:roofOf(P),floors:P.floors,north:P.north||0,views:P.views||[]});
 function resetHistory(){ HIST.u=[]; HIST.r=[]; HIST.cur=snapState(); updUndo(); }
 function updUndo(){ $('undoBtn').disabled=!HIST.u.length; $('redoBtn').disabled=!HIST.r.length; }
 function commit(){
   const s=snapState(); if(s!==HIST.cur){ HIST.u.push(HIST.cur); if(HIST.u.length>100) HIST.u.shift(); HIST.r=[]; HIST.cur=s; if(P.id===AUTO) AUTO=null; saveSoon(); updUndo(); }
   refreshAfter(); const ae=document.activeElement; if(!(ae&&ae.closest&&ae.closest('#side')&&/INPUT/.test(ae.tagName))) renderPanel(); else refreshStatus();
 }
-function restore(s){ const o=JSON.parse(s); Object.assign(P,{name:o.name,wallH:o.wallH,wallT:o.wallT,roof:o.roof,floors:o.floors}); P.cur=Math.min(P.cur,P.floors.length-1); if(SEL&&!selObj()) SEL=null; refreshAfter(); renderPanel(); updateFab(); updProj(); renderFloorBar(); saveSoon(); }
+function restore(s){ const o=JSON.parse(s); Object.assign(P,{name:o.name,wallH:o.wallH,wallT:o.wallT,roof:o.roof,floors:o.floors,north:o.north||0,views:o.views||[]}); P.cur=Math.min(P.cur,P.floors.length-1); if(SEL&&!selObj()) SEL=null; refreshAfter(); renderPanel(); updateFab(); updProj(); renderFloorBar(); saveSoon(); }
 function undo(){ if(!HIST.u.length) return; HIST.r.push(HIST.cur); HIST.cur=HIST.u.pop(); restore(HIST.cur); updUndo(); }
 function redo(){ if(!HIST.r.length) return; HIST.u.push(HIST.cur); HIST.cur=HIST.r.pop(); restore(HIST.cur); updUndo(); }
 function refreshAfter(){ computeProblems(); computeStats(); need2=true; sync3d(); }
@@ -1168,6 +1188,16 @@ function floorCanvas(kind,color){
     let sd=5; const rn=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; };
     for(let i=0;i<60;i++){ x.fillStyle=shade(color,(rn()-0.5)*0.18); x.beginPath(); x.arc(rn()*256,rn()*256,10+rn()*26,0,Math.PI*2); x.fill(); }
     x.lineWidth=1.4; for(let i=0;i<900;i++){ const px=rn()*256, py=rn()*256, l=4+rn()*7; x.strokeStyle=shade(color,(rn()-0.45)*0.5); x.beginPath(); x.moveTo(px,py); x.lineTo(px+(rn()-0.5)*3,py-l); x.stroke(); }
+  }
+  if(kind==='gravel'){
+    let sd=11; const rn=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; };
+    for(let i=0;i<1500;i++){ x.fillStyle=shade(color,(rn()-0.5)*0.55); x.beginPath(); x.arc(rn()*256,rn()*256,1.5+rn()*3.5,0,Math.PI*2); x.fill(); }
+  } else if(kind==='brick'){
+    let sd=13; const rn=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; };
+    x.fillStyle=shade(color,0.3); x.fillRect(0,0,256,256); const bh=256/12, bw=64;
+    for(let r=0;r<12;r++){ const off=r%2?bw/2:0; for(let i=-1;i<5;i++){ x.fillStyle=shade(color,(rn()-0.5)*0.14-0.04); x.fillRect(off+i*bw+1.5,r*bh+1.5,bw-3,bh-3); } }
+  } else if(kind==='stripe'){
+    for(let i=0;i<8;i++){ if(i%2){ x.fillStyle=shade(color,-0.09); x.fillRect(i*32,0,32,256); } }
   }
   FC[k]=cv; return cv;
 }
@@ -1256,13 +1286,14 @@ function wallDistances(it){
 }
 function updScale(){ const cands=[0.1,0.2,0.5,1,2,5,10]; let m=1; for(const c of cands){ if(c*V2.s>=50){ m=c; break; } m=c; } $('scaleLine').style.width=Math.round(m*V2.s)+'px'; $('scaleTxt').textContent=m<1?cm(m)+' ซม.':m+' ม.'; }
 function draw2d(){
-  need2=false; if(W2<2||!P) return;
+  need2=false; if(W2<2||!P) return; if(BG.key!==bgKey()) loadBg();
   const c=g2, s=V2.s; c.setTransform(dpr2,0,0,dpr2,0,0); c.fillStyle=TK.plan; c.fillRect(0,0,W2,H2);
   /* ตาราง */
   const tl=s2w(0,0), br=s2w(W2,H2);
   const grid=(step,color)=>{ c.strokeStyle=color; c.lineWidth=1; c.beginPath(); for(let i=Math.floor(tl[0]/step);i*step<=br[0];i++){ const X=Math.round(V2.ox+i*step*s)+0.5; c.moveTo(X,0); c.lineTo(X,H2); } for(let i=Math.floor(tl[1]/step);i*step<=br[1];i++){ const Y=Math.round(V2.oy+i*step*s)+0.5; c.moveTo(0,Y); c.lineTo(W2,Y); } c.stroke(); };
   if(s*0.1>=7) grid(0.1,TK.grid); else if(s*0.5>=7) grid(0.5,TK.grid);
   grid(1,TK.gridMajor);
+  drawBg();
   /* ผนังชั้นล่าง (จาง ๆ ไว้เทียบตำแหน่ง) */
   if(P.cur>0){ c.save(); c.globalAlpha=0.16; c.fillStyle=TK.wall; wallsOf(P.floors[P.cur-1]).forEach(w=>w.pieces.forEach(pc=>{ if(pc.kind==='solid'){ pathPoly(pc.q); c.fill(); } })); c.restore(); }
   /* พื้น */
@@ -1318,6 +1349,7 @@ function draw2d(){
   /* สายไฟ + สัญลักษณ์ไฟฟ้า */
   if(UI.wires) drawWires();
   list.forEach(it=>{ const k=C[it.type]; if(k.elec){ const Q=w2s(it.x,it.y); elecSym(Q[0],Q[1],k.light?'light':k.elec); } });
+  drawDims(); drawLabels();
   /* ชื่อห้อง + ความยาวผนัง */
   const placed=[], FONT_ROOM='600 13px "Bai Jamjuree",sans-serif';
   const fits=(t,font,w)=>{ c.font=font; return c.measureText(t).width<=w; };
@@ -1362,7 +1394,9 @@ function draw2d(){
     c.setLineDash([3,4]); c.strokeStyle=TK.accent; c.lineWidth=1; if(D.hover) D.guides.forEach(gd=>{ const Q=w2s(gd[0],gd[1]), H=w2s(D.hover[0],D.hover[1]); c.beginPath(); c.moveTo(Q[0],Q[1]); c.lineTo(H[0],H[1]); c.stroke(); }); c.setLineDash([]);
   }
   if((TOOL==='rect'||TOOL==='shape')&&P2.g&&P2.g.type==='rect'&&P2.g.p1){ const a=P2.g.p0, b=P2.g.p1; const x0=Math.min(a[0],b[0]), y0=Math.min(a[1],b[1]), x1=Math.max(a[0],b[0]), y1=Math.max(a[1],b[1]); pathPoly(rectPts(x0,y0,x1-x0,y1-y0)); c.fillStyle=TK.accentSoft; c.fill(); c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); const M=w2s((x0+x1)/2,(y0+y1)/2); pill(cm(x1-x0)+' × '+cm(y1-y0),M[0],M[1],TK.accent,TK.accentInk); }
+  if(TOOL==='shape'&&P2.g&&P2.g.type==='circle'&&P2.g.r>0){ const Q=w2s(P2.g.p0[0],P2.g.p0[1]); c.beginPath(); c.arc(Q[0],Q[1],P2.g.r*s,0,Math.PI*2); c.fillStyle=TK.accentSoft; c.fill(); c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); pill('รัศมี '+cm(P2.g.r),Q[0],Q[1],TK.accent,TK.accentInk); }
   if((TOOL==='door'||TOOL==='window')&&HOV){ const e=edgeOf(HOV.room,HOV.i), w=TOOL==='door'?0.8:UI.openNext?VENT_SIZE[UI.openNext][0]:1.0, t=clamp(HOV.t,w/2,Math.max(w/2,e.len-w/2)); const ax=e.a[0]+e.ux*(t-w/2), ay=e.a[1]+e.uy*(t-w/2), bx=e.a[0]+e.ux*(t+w/2), by=e.a[1]+e.uy*(t+w/2); pathPoly([[ax,ay],[bx,by],[bx+e.nx*P.wallT,by+e.ny*P.wallT],[ax+e.nx*P.wallT,ay+e.ny*P.wallT]]); c.fillStyle=TK.accent; c.fill(); }
+  if(P){ const nr=(P.north||0)*Math.PI/180, X=W2-30, Y=H2-30; c.save(); c.translate(X,Y); c.fillStyle=TK.surface; c.strokeStyle=TK.muted; c.lineWidth=1.2; c.beginPath(); c.arc(0,0,17,0,Math.PI*2); c.fill(); c.stroke(); c.rotate(nr); c.fillStyle='#c2263f'; c.beginPath(); c.moveTo(0,-13); c.lineTo(5,2); c.lineTo(-5,2); c.closePath(); c.fill(); c.fillStyle=TK.muted; c.beginPath(); c.moveTo(0,11); c.lineTo(5,2); c.lineTo(-5,2); c.closePath(); c.fill(); c.rotate(-nr); c.restore(); htext('N',X+Math.sin(nr)*25,Y-Math.cos(nr)*25,'700 11px "Bai Jamjuree",sans-serif','#c2263f'); }
   updScale();
 }
 
@@ -1389,6 +1423,68 @@ function elecSym(X,Y,k){
   c.restore();
 }
 
+/* ---------------- เส้นวัดระยะ · ข้อความ · รูปแปลนพื้นหลัง (แบบ SketchUp Dimensions/Text, Planner 5D ruler) ---------------- */
+const getDim=id=>P.dims.find(o=>o.id===id);
+const getLabel=id=>P.labels.find(o=>o.id===id);
+const MS={a:null,hover:null};
+const LBOX={};
+const LABEL_SIZES=[[0.15,'เล็ก'],[0.25,'กลาง'],[0.4,'ใหญ่'],[0.7,'ใหญ่มาก']];
+const LABEL_COLORS=['#1d282d','#c2263f','#3f6fb5','#2f7d6b','#d0763a','#7a5236'];
+function measureVerts(){ const v=allVerts(); P.items.forEach(it=>itemCorners(it).forEach(q=>v.push(q))); P.dims.forEach(d=>{ v.push(d.a,d.b); }); return v; }
+function dimLine(a,b,col,sel){
+  const c=g2, A=w2s(a[0],a[1]), B=w2s(b[0],b[1]), L=Math.hypot(b[0]-a[0],b[1]-a[1]), dx=B[0]-A[0], dy=B[1]-A[1], ln=Math.hypot(dx,dy)||1, nx=-dy/ln*6, ny=dx/ln*6;
+  c.save(); c.strokeStyle=col; c.lineWidth=sel?2.2:1.5; c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.moveTo(A[0]-nx,A[1]-ny); c.lineTo(A[0]+nx,A[1]+ny); c.moveTo(B[0]-nx,B[1]-ny); c.lineTo(B[0]+nx,B[1]+ny); c.stroke();
+  [[A,1],[B,-1]].forEach(([P0,s])=>{ const ux=dx/ln*s, uy=dy/ln*s; c.beginPath(); c.moveTo(P0[0],P0[1]); c.lineTo(P0[0]+ux*8-uy*3.5,P0[1]+uy*8+ux*3.5); c.lineTo(P0[0]+ux*8+uy*3.5,P0[1]+uy*8-ux*3.5); c.closePath(); c.fillStyle=col; c.fill(); });
+  if(ln>24) pill(L>=1?f2(L)+' ม.':cm(L)+' ซม.',(A[0]+B[0])/2,(A[1]+B[1])/2-12,col,'#ffffff');
+  c.restore();
+}
+function drawDims(){
+  const sel=SEL&&SEL.kind==='dim'?SEL.id:null;
+  P.dims.forEach(d=>{ const on=d.id===sel; dimLine(d.a,d.b,on?TK.accent:'#3f6fb5',on); if(on) [d.a,d.b].forEach(q=>{ const Q=w2s(q[0],q[1]); g2.beginPath(); g2.arc(Q[0],Q[1],6,0,Math.PI*2); g2.fillStyle=TK.surface; g2.fill(); g2.strokeStyle=TK.accent; g2.lineWidth=2; g2.stroke(); }); });
+  if(TOOL==='measure'&&MS.a){ const b=MS.hover||MS.a; dimLine(MS.a,b,TK.accent,true); }
+}
+function drawLabels(){
+  const c=g2, s=V2.s, sel=SEL&&SEL.kind==='label'?SEL.id:null;
+  P.labels.forEach(l=>{ const px=clamp(l.size*s,9,90), Q=w2s(l.x,l.y); c.save(); c.font='600 '+px+'px "Bai Jamjuree",sans-serif'; c.textAlign='center'; c.textBaseline='middle'; const tw=c.measureText(l.text).width;
+    LBOX[l.id]=[Q[0]-tw/2-4,Q[1]-px/2-3,Q[0]+tw/2+4,Q[1]+px/2+3];
+    c.lineJoin='round'; c.lineWidth=Math.max(3,px/5); c.strokeStyle=TK.plan; c.strokeText(l.text,Q[0],Q[1]); c.fillStyle=l.color; c.fillText(l.text,Q[0],Q[1]);
+    if(l.id===sel){ const b=LBOX[l.id]; c.strokeStyle=TK.accent; c.lineWidth=2; c.setLineDash([4,3]); c.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]); c.setLineDash([]); }
+    c.restore(); });
+}
+function addDim(a,b){ if(Math.hypot(b[0]-a[0],b[1]-a[1])<0.01) return; const d={id:uid('d'),a:a.slice(),b:b.slice()}; P.dims.push(d); MS.a=null; MS.hover=null; commit(); const L=Math.hypot(b[0]-a[0],b[1]-a[1]); toast('ระยะ '+(L>=1?f2(L)+' ม.':cm(L)+' ซม.')+' · วัดต่อได้เลย หรือแตะเส้นเพื่อแก้/ลบ'); }
+function addLabel(w){ const l={id:uid('t'),x:rd(w[0]),y:rd(w[1]),text:'ข้อความ',size:0.25,color:LABEL_COLORS[0]}; P.labels.push(l); setTool('select'); select({kind:'label',id:l.id}); commit(); setSheet(true); requestAnimationFrame(()=>{ const el=$('l-text'); if(el){ el.focus(); el.select(); } }); }
+/* รูปแปลนพื้นหลัง: เก็บในเครื่องนี้ (IndexedDB) แยกตามแปลน+ชั้น ไม่ไปกับไฟล์แปลน */
+const BG={key:null,data:null,img:null};
+let bgDbP=null;
+function bgDb(){ return bgDbP||(bgDbP=new Promise(res=>{ try{ const r=indexedDB.open('ljh-bg',1); r.onupgradeneeded=()=>r.result.createObjectStore('bg'); r.onsuccess=()=>res(r.result); r.onerror=()=>res(null); }catch(e){ res(null); } })); }
+async function bgGet(k){ const db=await bgDb(); if(!db) return null; return new Promise(res=>{ try{ const q=db.transaction('bg').objectStore('bg').get(k); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }catch(e){ res(null); } }); }
+async function bgPut(k,v){ const db=await bgDb(); if(!db) return false; return new Promise(res=>{ try{ const t=db.transaction('bg','readwrite'), st=t.objectStore('bg'); v?st.put(v,k):st.delete(k); t.oncomplete=()=>res(true); t.onerror=()=>res(false); }catch(e){ res(false); } }); }
+const bgKey=()=>P?P.id+'/'+curFloor().id:null;
+function loadBg(){ const k=bgKey(); BG.key=k; BG.data=null; BG.img=null; if(!k) return; bgGet(k).then(d=>{ if(BG.key!==k||!d) return; BG.data=d; const im=new Image(); im.onload=()=>{ if(BG.key===k){ BG.img=im; need2=true; if(UI.tab==='info') renderPanel(); } }; im.src=d.src; }); }
+let bgSaveT=null;
+function saveBg(){ clearTimeout(bgSaveT); const k=BG.key, d=BG.data; bgSaveT=setTimeout(()=>{ bgPut(k,d).then(ok=>{ if(!ok) toast('เก็บรูปพื้นหลังไม่ได้ในเบราว์เซอร์นี้'); }); },300); }
+const bgH=()=>BG.img?BG.data.w*BG.img.naturalHeight/BG.img.naturalWidth:0;
+function pickBgFile(f){
+  if(!f||!/^image\//.test(f.type)){ toast('เลือกไฟล์รูปภาพ'); return; }
+  const rdr=new FileReader(); rdr.onload=()=>{ const im=new Image(); im.onload=()=>{
+    const k=Math.min(1,2000/Math.max(im.naturalWidth,im.naturalHeight)), cv=document.createElement('canvas'); cv.width=Math.round(im.naturalWidth*k); cv.height=Math.round(im.naturalHeight*k); cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+    const src=cv.toDataURL('image/jpeg',0.85), w0=10, c0=s2w(W2/2,H2/2), h0=w0*cv.height/cv.width;
+    BG.key=bgKey(); BG.data={src,x:rd(c0[0]-w0/2),y:rd(c0[1]-h0/2),w:w0,op:0.5,hide:false,lock:false}; const im2=new Image(); im2.onload=()=>{ BG.img=im2; need2=true; }; im2.src=src; saveBg();
+    if(UI.view==='3d') setView(isWide()?'split':'2d'); select({kind:'bg',id:'bg'}); toast('ใส่รูปแล้ว · ใช้ "วัดระยะ" วัดเส้นที่รู้ความยาวจริง แล้วกด "ตั้งสเกลรูปจากเส้นนี้"');
+  }; im.src=rdr.result; }; rdr.readAsDataURL(f);
+}
+function drawBg(){
+  if(!BG.img||!BG.data||BG.data.hide||TK===PRINT_TK) return; const d=BG.data, c=g2, A=w2s(d.x,d.y), w=d.w*V2.s, h=bgH()*V2.s;
+  c.save(); c.globalAlpha=d.op; c.drawImage(BG.img,A[0],A[1],w,h); c.restore();
+  if(SEL&&SEL.kind==='bg'){ c.save(); c.strokeStyle=TK.accent; c.lineWidth=2; c.setLineDash([6,4]); c.strokeRect(A[0],A[1],w,h); c.setLineDash([]); if(!d.lock){ c.fillStyle=TK.surface; c.beginPath(); c.arc(A[0]+w,A[1]+h,8,0,Math.PI*2); c.fill(); c.stroke(); } c.restore(); }
+}
+/* ตั้งสเกลรูปจากเส้นวัด: ความยาวจริง / ความยาวที่วัดได้ ขยายรูปรอบจุดเริ่มของเส้น */
+function scaleBgByDim(d,real){
+  if(!BG.data) return; const L=Math.hypot(d.b[0]-d.a[0],d.b[1]-d.a[1]); if(!(L>0.001)||!(real>0)) return; const k=real/L, a=d.a;
+  BG.data.x=rd(a[0]+(BG.data.x-a[0])*k); BG.data.y=rd(a[1]+(BG.data.y-a[1])*k); BG.data.w=rd(BG.data.w*k); BG.data.lock=true; saveBg();
+  d.b=[rd(a[0]+(d.b[0]-a[0])*k),rd(a[1]+(d.b[1]-a[1])*k)]; commit(); toast('ตั้งสเกลรูปแล้ว และล็อกรูปไว้ · เริ่มวาดห้องทับรูปได้เลย');
+}
+
 /* ---------------- จับนิ้ว/เมาส์บนแปลน ---------------- */
 const P2={ptrs:{},g:null}; let HOV=null;
 const D={pts:[],hover:null,guides:[]};
@@ -1403,6 +1499,7 @@ function addWire(pts){
   const wr={id:uid('w'),pts:pts.map(q=>[rd(q[0]),rd(q[1])]),c:UI.wireKind}; P.wires.push(wr); D.pts=[]; D.hover=null; D.guides=[]; updDrawBar(); commit();
   toast('เพิ่มสาย'+WIRE_KINDS[wr.c][0]+' ยาว '+f2(wireLen(wr,curFloor()))+' ม. · ลากเส้นต่อได้เลย หรือกด "เลือก/ย้าย"');
 }
+function circlePts(c,r,n){ n=n||32; const out=[]; for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; out.push([rd(c[0]+Math.cos(a)*r),rd(c[1]+Math.sin(a)*r)]); } return out; }
 function addShape(pts){
   pts=pts.map(q=>[rd(q[0]),rd(q[1])]); if(area2(pts)<0) pts.reverse();
   const s={id:uid('s'),name:'รูปทรง '+(P.shapes.length+1),pts,h:1.0,elev:0,color:SHAPE_COLORS[0],mat:'plain'};
@@ -1440,6 +1537,10 @@ function pick2(X,Y,w){
   if(so&&SEL.kind==='item'){ const h=rotHandle(so); if(Math.hypot(X-h[0],Y-h[1])<15) return {kind:'rot',id:so.id}; }
   if(so&&SEL.kind==='shape') for(let i=0;i<so.pts.length;i++){ const Q=w2s(so.pts[i][0],so.pts[i][1]); if(Math.hypot(X-Q[0],Y-Q[1])<14) return {kind:'scorner',id:so.id,i}; }
   if(so&&SEL.kind==='wire') for(let i=0;i<so.pts.length;i++){ const Q=w2s(so.pts[i][0],so.pts[i][1]); if(Math.hypot(X-Q[0],Y-Q[1])<13) return {kind:'wcorner',id:so.id,i}; }
+  if(so&&SEL.kind==='dim') for(const [k,q] of [['a',so.a],['b',so.b]]){ const Q=w2s(q[0],q[1]); if(Math.hypot(X-Q[0],Y-Q[1])<13) return {kind:'dcorner',id:so.id,end:k}; }
+  if(SEL&&SEL.kind==='bg'&&BG.data&&!BG.data.lock&&BG.img){ const A=w2s(BG.data.x+BG.data.w,BG.data.y+bgH()); if(Math.hypot(X-A[0],Y-A[1])<14) return {kind:'bgsize'}; }
+  for(let i=P.labels.length-1;i>=0;i--){ const b=LBOX[P.labels[i].id]; if(b&&X>=b[0]&&X<=b[2]&&Y>=b[1]&&Y<=b[3]) return {kind:'label',id:P.labels[i].id}; }
+  for(let i=P.dims.length-1;i>=0;i--){ const d=P.dims[i]; if(segProj(w[0],w[1],d.a[0],d.a[1],d.b[0],d.b[1]).d*V2.s<7) return {kind:'dim',id:d.id}; }
   if(so&&SEL.kind==='room'){
     for(let i=0;i<so.pts.length;i++){ const Q=w2s(so.pts[i][0],so.pts[i][1]); if(Math.hypot(X-Q[0],Y-Q[1])<14) return {kind:'corner',room:so.id,i}; }
     for(let i=0;i<so.pts.length;i++){ const e=edgeOf(so,i); if(e.len*V2.s<40) continue; const M=w2s((e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2); if(Math.hypot(X-M[0],Y-M[1])<14) return {kind:'edge',room:so.id,i}; }
@@ -1449,6 +1550,7 @@ function pick2(X,Y,w){
   const list=drawOrder(); for(let i=list.length-1;i>=0;i--){ const it=list[i]; const pad=Math.max(0,(24/V2.s-Math.min(it.w,it.d))/2); if(inItem(it,w[0],w[1],pad)) return {kind:'item',id:it.id}; }
   for(let i=P.shapes.length-1;i>=0;i--) if(pip(w[0],w[1],P.shapes[i].pts)) return {kind:'shape',id:P.shapes[i].id};
   const r=roomAtWall(w[0],w[1])||roomAt(w[0],w[1]); if(r) return {kind:'room',id:r.id};
+  if(BG.img&&BG.data&&!BG.data.hide&&!BG.data.lock&&w[0]>=BG.data.x&&w[0]<=BG.data.x+BG.data.w&&w[1]>=BG.data.y&&w[1]<=BG.data.y+bgH()) return {kind:'bg',id:'bg'};
   return null;
 }
 cv2.addEventListener('contextmenu',e=>e.preventDefault());
@@ -1474,16 +1576,23 @@ function hover2(p){
   const w=s2w(p[0],p[1]);
   if(isDraw()){ const sp=snapPoint(w[0],w[1],D.pts[D.pts.length-1],drawVerts()); D.hover=[sp.x,sp.y]; D.guides=sp.guides; need2=true; }
   else if(TOOL==='door'||TOOL==='window'){ HOV=nearestWall(w[0],w[1],0.8); need2=true; }
+  else if(TOOL==='measure'){ const sp=snapPoint(w[0],w[1],MS.a,measureVerts()); MS.hover=[sp.x,sp.y]; need2=true; }
   else if(TOOL==='select'){ const h=pick2(p[0],p[1],w); cv2.style.cursor=!h?'grab':(h.kind==='rot'?'crosshair':(h.kind==='room'&&!(SEL&&SEL.kind==='room'&&SEL.id===h.id))?'pointer':'move'); }
 }
 function startDrag2(g){
   const h=g.hit;
   if(g.btn===1||g.btn===2){ g.type='pan'; return; }
+  if(TOOL==='shape'&&UI.shapeMode==='circle'&&g.btn===0){ g.type='circle'; const sc=snapPoint(g.w0[0],g.w0[1],null,allVerts()); g.p0=[sc.x,sc.y]; g.r=0; return; }
   if((TOOL==='rect'||(TOOL==='shape'&&!D.pts.length))&&g.btn===0){ g.type='rect'; const s=snapPoint(g.w0[0],g.w0[1],null,allVerts()); g.p0=[s.x,s.y]; return; }
   if(TOOL!=='select'||!h){ g.type='pan'; return; }
   if(h.kind==='rot'){ g.type='rot'; g.id=h.id; return; }
   if(h.kind==='scorner'){ g.type='scorner'; g.id=h.id; g.i=h.i; return; }
   if(h.kind==='wcorner'){ g.type='wcorner'; g.id=h.id; g.i=h.i; SEL.i=h.i; return; }
+  if(h.kind==='dcorner'){ g.type='dcorner'; g.id=h.id; g.end=h.end; return; }
+  if(h.kind==='dim'){ g.type='dmove'; g.id=h.id; const d=getDim(h.id); g.a0=d.a.slice(); g.b0=d.b.slice(); if(!(SEL&&SEL.id===h.id)) select({kind:'dim',id:h.id}); return; }
+  if(h.kind==='label'){ g.type='lmove'; g.id=h.id; const l=getLabel(h.id); g.ix=l.x; g.iy=l.y; if(!(SEL&&SEL.id===h.id)) select({kind:'label',id:h.id}); return; }
+  if(h.kind==='bg'){ g.type='bgmove'; g.ix=BG.data.x; g.iy=BG.data.y; if(!(SEL&&SEL.kind==='bg')) select({kind:'bg',id:'bg'}); return; }
+  if(h.kind==='bgsize'){ g.type='bgsize'; return; }
   if(h.kind==='wire'){ g.type='wmove'; g.id=h.id; g.pts0=deep(getWire(h.id).pts); if(!(SEL&&SEL.id===h.id)) select({kind:'wire',id:h.id}); return; }
   if(h.kind==='shape'){ g.type='smove'; g.id=h.id; g.pts0=deep(getShape(h.id).pts); if(!(SEL&&SEL.id===h.id)) select({kind:'shape',id:h.id}); return; }
   if(h.kind==='corner'){ g.type='corner'; g.room=h.room; g.i=h.i; SEL.corner=h.i; SEL.wall=null; return; }
@@ -1503,18 +1612,25 @@ function moveDrag2(g,p,e){
     case 'edge': { const r=getRoom(g.room); if(!r) break; const dd=snapv((w[0]-g.w0[0])*g.nx+(w[1]-g.w0[1])*g.ny,0.05); const j=(g.i+1)%r.pts.length; r.pts[g.i]=[rd(g.a0[0]+g.nx*dd),rd(g.a0[1]+g.ny*dd)]; r.pts[j]=[rd(g.b0[0]+g.nx*dd),rd(g.b0[1]+g.ny*dd)]; g.moved=true; live(); break; }
     case 'room': { const r=getRoom(g.id); if(!r) break; const dx=snapv(w[0]-g.w0[0],0.05), dy=snapv(w[1]-g.w0[1],0.05); r.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.items.forEach(o=>{ const it=getItem(o.id); if(it){ it.x=rd(o.x+dx); it.y=rd(o.y+dy); } }); g.moved=true; live(); break; }
     case 'open': { const o=getOpen(g.id); const nw=nearestWall(w[0],w[1],1.2); if(o&&nw){ o.room=nw.room.id; o.edge=nw.i; o.t=rd(clamp(snapv(nw.t,0.01),o.w/2,Math.max(o.w/2,nw.len-o.w/2))); g.moved=true; live(); } break; }
+    case 'circle': { g.r=rd(Math.max(0,snapv(Math.hypot(w[0]-g.p0[0],w[1]-g.p0[1]),0.01))); need2=true; break; }
     case 'rect': { const s=snapPoint(w[0],w[1],null,allVerts()); g.p1=[s.x,s.y]; need2=true; break; }
     case 'scorner': { const sh=getShape(g.id); if(!sh) break; const sp=snapPoint(w[0],w[1],null,allVerts(sh,g.i)); sh.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
     case 'smove': { const sh=getShape(g.id); if(!sh) break; const dx=snapv(w[0]-g.w0[0],0.01), dy=snapv(w[1]-g.w0[1],0.01); sh.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.moved=true; live(); break; }
     case 'wcorner': { const wr=getWire(g.id); if(!wr) break; const sp=snapPoint(w[0],w[1],null,wireVerts(wr,g.i)); wr.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
+    case 'dcorner': { const d=getDim(g.id); if(!d) break; const cur=d[g.end], o=g.end==='a'?d.b:d.a, sp=snapPoint(w[0],w[1],o,measureVerts().filter(q=>q!==cur)); d[g.end]=[sp.x,sp.y]; g.moved=true; live(); break; }
+    case 'dmove': { const d=getDim(g.id); if(!d) break; const dx=snapv(w[0]-g.w0[0],0.01), dy=snapv(w[1]-g.w0[1],0.01); d.a=[rd(g.a0[0]+dx),rd(g.a0[1]+dy)]; d.b=[rd(g.b0[0]+dx),rd(g.b0[1]+dy)]; g.moved=true; live(); break; }
+    case 'lmove': { const l=getLabel(g.id); if(!l) break; l.x=rd(snapv(g.ix+w[0]-g.w0[0],0.01)); l.y=rd(snapv(g.iy+w[1]-g.w0[1],0.01)); g.moved=true; live(); break; }
+    case 'bgmove': { if(!BG.data) break; BG.data.x=rd(g.ix+w[0]-g.w0[0]); BG.data.y=rd(g.iy+w[1]-g.w0[1]); g.moved=true; g.bg=true; need2=true; break; }
+    case 'bgsize': { if(!BG.data) break; BG.data.w=rd(Math.max(0.5,w[0]-BG.data.x)); g.moved=true; g.bg=true; need2=true; break; }
     case 'wmove': { const wr=getWire(g.id); if(!wr) break; const dx=snapv(w[0]-g.w0[0],0.05), dy=snapv(w[1]-g.w0[1],0.05); wr.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.moved=true; live(); break; }
   }
   g.lx=p[0]; g.ly=p[1];
 }
 function endDrag2(){
   const g=P2.g; P2.g=null; if(!g) return;
+  if(g.type==='circle'){ if(g.r>=0.03) addShape(circlePts(g.p0,g.r)); else need2=true; return; }
   if(g.type==='rect'&&g.p1){ const a=g.p0, b=g.p1, w=Math.abs(b[0]-a[0]), d=Math.abs(b[1]-a[1]); if(TOOL==='shape'){ if(w>=0.05&&d>=0.05) addShape(rectPts(Math.min(a[0],b[0]),Math.min(a[1],b[1]),w,d)); else need2=true; return; } if(w>=0.3&&d>=0.3) addRectRoom(Math.min(a[0],b[0]),Math.min(a[1],b[1]),w,d); else need2=true; return; }
-  if(g.moved){ updateFab(); commit(); }
+  if(g.moved){ if(g.bg){ saveBg(); if(UI.tab==='edit') renderPanel(); return; } updateFab(); commit(); }
 }
 function up2(e){
   if(!P2.ptrs[e.pointerId]) return; delete P2.ptrs[e.pointerId]; const g=P2.g; if(!g) return;
@@ -1530,6 +1646,9 @@ cv2.addEventListener('wheel',e=>{ e.preventDefault(); const p=xy(e,cv2); zoom2(M
 function tap2(g){
   const w=g.w0;
   if(g.btn!==0&&g.btn!==-1&&g.btn!==undefined) return;
+  if(TOOL==='measure'){ const sp=snapPoint(w[0],w[1],MS.a,measureVerts()), p=[sp.x,sp.y]; if(!MS.a){ MS.a=p; MS.hover=null; need2=true; toast('แตะจุดที่สองเพื่อวัด'); } else addDim(MS.a,p); return; }
+  if(TOOL==='text'){ addLabel(w); return; }
+  if(TOOL==='shape'&&UI.shapeMode==='circle'){ const sc=snapPoint(w[0],w[1],null,allVerts()); addShape(circlePts([sc.x,sc.y],0.5)); return; }
   if(isDraw()){ drawAdd(w); return; }
   if(TOOL==='rect'){ const s=snapPoint(w[0],w[1],null,[]); addRectRoom(s.x-1.5,s.y-1.5,3,3); return; }
   if(TOOL==='door'||TOOL==='window'){ placeOpening(TOOL,w); return; }
@@ -1540,6 +1659,8 @@ function tap2(g){
   if(h.kind==='edge'){ select({kind:'room',id:h.room,wall:h.i}); return; }
   if(h.kind==='scorner'){ select({kind:'shape',id:h.id}); return; }
   if(h.kind==='wcorner'){ select({kind:'wire',id:h.id,i:h.i}); return; }
+  if(h.kind==='dcorner'){ select({kind:'dim',id:h.id}); return; }
+  if(h.kind==='bgsize') return;
   select({kind:h.kind,id:h.id});
 }
 
@@ -1573,7 +1694,9 @@ function finishDraw(){
 function updDrawBar(){
   const n=D.pts.length, wi=TOOL==='wire', kb=$('dbKinds'); kb.hidden=!wi; $('dbClose').textContent=wi?'จบสาย':'ปิดห้อง';
   if(wi){ kb.innerHTML=Object.keys(WIRE_KINDS).map(k=>`<button type="button" data-wk="${k}" aria-pressed="${UI.wireKind===k}">${WIRE_KINDS[k][0]}</button>`).join(''); $('dbTxt').textContent=n?('วางแล้ว '+n+' จุด'+(n>=2?' · แตะจุดสุดท้ายซ้ำเพื่อจบสาย':'')):'แตะทีละจุด เริ่มจากตู้ไฟหรือสวิตช์'; $('dbUndo').disabled=!n; $('dbClose').disabled=n<2; return; }
+  if(TOOL==='shape'){ kb.hidden=false; kb.innerHTML=[['poly','มุม/สี่เหลี่ยม'],['circle','วงกลม']].map(([k,t])=>`<button type="button" data-sm="${k}" aria-pressed="${UI.shapeMode===k}">${t}</button>`).join(''); }
   updDrawBarRoom(n);
+  if(TOOL==='shape'&&UI.shapeMode==='circle') $('dbTxt').textContent='ลากจากจุดกลางออกไปเพื่อวาดวงกลม หรือแตะเพื่อวางวงกลม 1 ม.';
 }
 function updDrawBarRoom(n){ const sh=TOOL==='shape'; $('dbTxt').textContent=n?('วางแล้ว '+n+' มุม'+(n>=3?(sh?' · แตะมุมแรกเพื่อปิดรูปทรง':' · แตะมุมแรกเพื่อปิดห้อง'):'')):(sh?'แตะวางมุมของรูปทรง หรือลากเป็นสี่เหลี่ยม':'แตะบนแปลนเพื่อวางมุมแรก'); $('dbUndo').disabled=!n; $('dbClose').disabled=n<3; }
 function addRectRoom(x0,y0,w,d){ const r=newRoom(rectPts(snapv(x0,0.05),snapv(y0,0.05),rd(w),rd(d))); P.rooms.push(r); setTool('select'); select({kind:'room',id:r.id}); commit(); toast('เพิ่ม '+r.name+' แล้ว · '+cm(w)+'×'+cm(d)+' ซม.'); }
@@ -1612,7 +1735,21 @@ function init3d(){
 }
 function theme3d(){ if(!R3.ok) return; R3.selMat.color.set(TK.accent); R3.warnMat.color.set(TK.warn); applyNight(); need3=true; }
 /* "เปิดไฟ": ฟ้ามืด แดดเกือบหมด หลอดไฟเรืองแสง และมีแสงจากหลอดที่ใกล้จุดที่มองอยู่ไม่เกิน 8 ดวง */
-function applyNight(){ const n=UI.night; R3.hemi.intensity=n?0.1:0.82; R3.sun.intensity=n?0.03:0.72; R3.scene.background=new T.Color(n?'#10151d':TK.scene); R3.groundMat.color.set(n?'#1a2029':TK.ground); GLOWS.forEach(m=>{ m.emissiveIntensity=n?1.4:0.35; }); }
+/* แดดตามเวลา (6:00–18:00) และทิศเหนือของแปลน: P.north = มุมของทิศเหนือ วัดตามเข็มนาฬิกาจากด้านบนของแปลน */
+const fmtHour=h=>Math.floor(h)+':'+(h%1?'30':'00')+' น.';
+function placeSun(){
+  if(!R3.ok||!P) return; const b=bounds3d(), cx=(b.x0+b.x1)/2, cz=(b.y0+b.y1)/2, t=clamp((UI.sunHour-6)/12,0,1), el=(6+74*Math.sin(Math.PI*t))*Math.PI/180, az=(90+180*t)*Math.PI/180, nr=(P.north||0)*Math.PI/180;
+  const hx=Math.sin(nr)*Math.cos(az)+Math.cos(nr)*Math.sin(az), hy=-Math.cos(nr)*Math.cos(az)+Math.sin(nr)*Math.sin(az), d=30, se=Math.sin(el);
+  R3.sun.position.set(cx+hx*Math.cos(el)*d,elevOf(P.cur)+se*d,cz+hy*Math.cos(el)*d); R3.sun.target.position.set(cx,elevOf(P.cur)*0.5,cz);
+  R3.sunI=0.4+0.4*se; R3.sun.color.set(se<0.4?'#ffd3a3':'#ffffff'); if(!UI.night) R3.sun.intensity=R3.sunI; need3=true;
+}
+function goView(vw){
+  if(WK.on) setWalk(false); if(vw.floor!==P.cur&&P.floors[vw.floor]) setFloor(vw.floor);
+  UI.roof=vw.roof; $('roofBtn').setAttribute('aria-pressed',UI.roof?'true':'false'); $('wallBtn').disabled=UI.roof; if(R3.ok) R3.roof.visible=roofShown();
+  const go=()=>{ Object.assign(CAM,vw.cam); applyCam(); updateWallCut(true); need3=true; };
+  if(UI.view==='2d'){ setView(isWide()?'split':'3d'); setTimeout(go,80); } else go();
+}
+function applyNight(){ const n=UI.night; R3.hemi.intensity=n?0.1:0.82; R3.sun.intensity=n?0.03:(R3.sunI||0.72); R3.scene.background=new T.Color(n?'#10151d':TK.scene); R3.groundMat.color.set(n?'#1a2029':TK.ground); GLOWS.forEach(m=>{ m.emissiveIntensity=n?1.4:0.35; }); }
 function syncLamps(force){
   if(!R3.ok) return; const list=[];
   if(UI.night) for(let k=0;k<=P.cur;k++){ const ey=elevOf(k); P.floors[k].items.forEach(it=>{ if(!isLight(it)) return; const c=C[it.type], ly=c.lightY==null?0.5:c.lightY; list.push([it.x,ey+(it.elev||0)+itemH(it)*ly-(ly===0?0.06:0),it.y]); }); }
@@ -1660,7 +1797,8 @@ function buildShell(){
   wallsOf(fl).forEach(ws=>{
     if(ws.room.wallType==='none') return;
     const g=new T.Group(); g.position.y=ey; const mesh=SEE(ws.room.wallType);
-    const wm=mesh?seeMat(ws.room.wallType,5,5):mat(ws.room.wallColor,{roughness:0.95}), cap=mesh?mat(FRAME,{roughness:0.8}):mat(shade(ws.room.wallColor,-0.45),{roughness:0.9});
+    const wo=(ws.room.walls||{})[ws.i]||{}, wcol=wo.c||ws.room.wallColor, wpat=wo.p||ws.room.wallPat||'plain';
+    const wm=mesh?seeMat(ws.room.wallType,5,5):wallMat(wcol,wpat), cap=mesh?mat(FRAME,{roughness:0.8}):mat(shade(wcol,-0.45),{roughness:0.9});
     ws.pieces.forEach(pc=>{ const m=prism(pc.q,pc.y0,pc.y1,[cap,wm]); m.castShadow=!mesh; m.userData={base:pc.y0<0.01,h:pc.y1-pc.y0}; g.add(m); });
     if(mesh){ /* กรอบไม้: เสาทุก ~1.2 ม. + คานบน/กลาง/ล่าง */
       const e=ws.e, A=ws.room.pts[ws.i], TT=P.wallT, rot=Math.atan2(-e.uy,e.ux), at=u=>[A[0]+e.ux*u+e.nx*TT/2,A[1]+e.uy*u+e.ny*TT/2];
@@ -1699,7 +1837,7 @@ function buildShell(){
   }
   buildRoof();
   const b=bounds3d(), cx=(b.x0+b.x1)/2, cz=(b.y0+b.y1)/2, half=Math.max(b.x1-b.x0,b.y1-b.y0)/2+2+P.cur;
-  R3.sun.position.set(cx+4,10+elevOf(P.cur),cz+6); R3.sun.target.position.set(cx,0,cz); const c=R3.sun.shadow.camera; c.left=-half; c.right=half; c.top=half; c.bottom=-half; c.near=1; c.far=60; c.updateProjectionMatrix();
+  const c=R3.sun.shadow.camera; c.left=-half; c.right=half; c.top=half; c.bottom=-half; c.near=1; c.far=80; c.updateProjectionMatrix(); placeSun();
   updateWallCut(true);
 }
 /* ช่องลมในผนัง: บล็อกช่องลม (ตารางลายดอก) และช่องเกล็ด (ใบเกล็ดเอียง + มุ้งลวด) วางจากฐาน y=0 กว้าง w สูง h หนา d */
@@ -1728,6 +1866,8 @@ function turbine(g,p){
 let VCV=null;
 function ventCanvas(){ if(VCV) return VCV; const cv=document.createElement('canvas'); cv.width=cv.height=64; const x=cv.getContext('2d'); x.fillStyle='#f1efea'; x.fillRect(0,0,64,64); x.fillStyle='#8f8a80'; for(let i=0;i<4;i++) for(let j=0;j<4;j++){ x.beginPath(); x.arc(8+i*16,8+j*16,2.6,0,Math.PI*2); x.fill(); } return VCV=cv; }
 function soffitBox(g,w,d,x,y,z){ const k='soff'+w.toFixed(2)+'x'+d.toFixed(2); if(!TEX[k]){ const t=new T.CanvasTexture(ventCanvas()); t.wrapS=t.wrapT=T.RepeatWrapping; t.repeat.set(w/0.25,d/0.25); TEX[k]=new T.MeshStandardMaterial({map:t,roughness:0.9}); } const m=new T.Mesh(new T.BoxGeometry(w,0.012,d),TEX[k]); m.position.set(x,y,z); m.receiveShadow=true; g.add(m); return m; }
+/* ผนังมีลาย: ภาพ 256 จุด = 1.2 ม. วนซ้ำตามความยาวผนัง */
+function wallMat(color,pat){ if(!pat||pat==='plain') return mat(color,{roughness:0.95}); const k='wall'+pat+color; if(TEX[k]) return TEX[k]; const t=new T.CanvasTexture(floorCanvas(pat,color)); t.wrapS=t.wrapT=T.RepeatWrapping; t.repeat.set(1/1.2,1/1.2); t.anisotropy=R3.renderer.capabilities.getMaxAnisotropy(); return TEX[k]=new T.MeshStandardMaterial({map:t,color:'#ffffff',roughness:0.9}); }
 function roofMat(c,kind){
   const k='roof'+(kind||'tile')+c; if(TEX[k]) return TEX[k];
   const t=new T.CanvasTexture(roofCanvas(c,kind)); t.wrapS=t.wrapT=T.RepeatWrapping; t.repeat.set(1/1.0,1/0.9); t.anisotropy=R3.renderer.capabilities.getMaxAnisotropy();
@@ -1878,6 +2018,8 @@ function shapeMat(s){
   const k='shape'+s.mat+s.color; if(TEX[k]) return TEX[k]; let m;
   if(s.mat==='wood'){ const t=new T.CanvasTexture(floorCanvas('wood',s.color)); t.wrapS=t.wrapT=T.RepeatWrapping; t.repeat.set(1/1.2,1/1.2); m=new T.MeshStandardMaterial({map:t,color:'#ffffff',roughness:0.8}); }
   else if(s.mat==='glass') m=new T.MeshStandardMaterial({color:s.color,transparent:true,opacity:0.35,roughness:0.08,metalness:0.2,depthWrite:false});
+  else if(s.mat==='grass'||s.mat==='paving'||s.mat==='gravel'){ const t=new T.CanvasTexture(floorCanvas(s.mat==='paving'?'tile':s.mat,s.color)); t.wrapS=t.wrapT=T.RepeatWrapping; t.repeat.set(1/1.2,1/1.2); m=new T.MeshStandardMaterial({map:t,color:'#ffffff',roughness:0.92}); }
+  else if(s.mat==='water') m=new T.MeshStandardMaterial({color:s.color,transparent:true,opacity:0.72,roughness:0.12,metalness:0.15});
   else m=new T.MeshStandardMaterial({color:s.color,roughness:s.mat==='concrete'?1:0.7});
   return TEX[k]=m;
 }
@@ -2028,9 +2170,31 @@ function pgAdd(){
   <p class="muted small" style="margin:12px 0 0">แตะของเพื่อวางกลางจอ แล้วลากไปที่ที่ต้องการ</p>`;
 }
 function statusHtml(it){ const pr=PROB[it.id]; return pr?`ระวัง: ${esc(pr.join(' · '))}`:'วางได้ ไม่ชนอะไร'; }
+/* ทำซ้ำเป็นแถว (แบบ SketchUp Move+copy แล้วพิมพ์ x5) */
+function arrHtml(){ return `<h3>ทำซ้ำเป็นแถว</h3><div class="f3"><label class="f" for="a-n">เพิ่มอีก (ชิ้น)<input id="a-n" type="number" inputmode="numeric" min="1" max="30" value="${UI.arrN}"></label><label class="f" for="a-gap">ห่างกัน (ซม.)<input id="a-gap" type="number" inputmode="numeric" min="0" value="${UI.arrGap}"></label></div><div class="btnrow">${[['r','ขวา →'],['d','ลง ↓'],['l','← ซ้าย'],['u','ขึ้น ↑']].map(([k,t])=>`<button type="button" class="btn sm" data-act="arr" data-v="${k}">${t}</button>`).join('')}</div>`; }
 function pgEdit(){
   const o=selObj();
   if(!o) return `<p class="empty">แตะของ ห้อง ประตู หรือหน้าต่างบนแปลนเพื่อแก้ไข</p>`;
+  if(SEL.kind==='dim'){ const L=Math.hypot(o.b[0]-o.a[0],o.b[1]-o.a[1]);
+    return `<div class="ttl">เส้นวัดระยะ</div>
+    <div class="kv"><span>ยาว</span><b>${f2(L)} ม. (${cm(L)} ซม.)</b></div>
+    <h3>เปลี่ยนความยาว (ซม.)</h3><div class="f3"><label class="f" for="d-len">ยาว<input id="d-len" type="number" inputmode="numeric" min="1" value="${cm(L)}"></label></div>
+    ${BG.data?`<h3>ตั้งสเกลรูปแปลนพื้นหลัง</h3><p class="muted small" style="margin:0 0 6px">วางเส้นนี้ทับเส้นในรูปที่รู้ความยาวจริง แล้วพิมพ์ความยาวจริง</p><div class="f3"><label class="f" for="d-real">ยาวจริง (ซม.)<input id="d-real" type="number" inputmode="numeric" min="1" placeholder="เช่น 400"></label></div><div class="btnrow"><button type="button" class="btn pri" data-act="bgScale">ตั้งสเกลรูปจากเส้นนี้</button></div>`:''}
+    <p class="muted small" style="margin:10px 0 0">ลากปลายเส้นเพื่อวัดใหม่ ลากกลางเส้นเพื่อย้าย</p>
+    <div class="btnrow sep"><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`; }
+  if(SEL.kind==='label') return `<div class="ttl">ข้อความบนแปลน</div>
+    <input id="l-text" class="in-name" type="text" value="${esc(o.text)}" aria-label="ข้อความ" style="margin-top:8px">
+    <h3>ขนาด</h3><div class="seg sm">${LABEL_SIZES.map(([v,t])=>`<button type="button" data-act="lsize" data-v="${v}" aria-pressed="${Math.abs(o.size-v)<0.001}">${t}</button>`).join('')}</div>
+    <h3>สี</h3><div class="sw">${swatches(LABEL_COLORS,o.color,'lcol')}</div>
+    <div class="btnrow sep"><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
+  if(SEL.kind==='bg') return `<div class="ttl">รูปแปลนพื้นหลัง (${esc(curFloor().name)})</div>
+    <p class="muted small" style="margin:6px 0 0">รูปนี้เก็บไว้ในเครื่องนี้เท่านั้น ใช้ลอกลายวาดห้องทับ</p>
+    <h3>ความเข้ม</h3><div class="seg sm">${[0.25,0.5,0.75,1].map(v=>`<button type="button" data-act="bgOp" data-v="${v}" aria-pressed="${Math.abs(o.op-v)<0.01}">${Math.round(v*100)}%</button>`).join('')}</div>
+    <h3>ขนาดรูป (ม.)</h3><div class="f3"><label class="f" for="bg-w">กว้าง<input id="bg-w" type="number" inputmode="decimal" min="0.5" step="0.1" value="${f2(o.w)}"></label></div>
+    <p class="muted small" style="margin:8px 0 0">ให้ขนาดตรงจริง: ใช้ "วัดระยะ" วัดเส้นในรูปที่รู้ความยาว แล้วแตะเส้นนั้นกด "ตั้งสเกลรูปจากเส้นนี้"</p>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="bg-lock" ${o.lock?'checked':''}> ล็อกรูป (ลากย้ายไม่ได้)</label>
+    <label class="chk"><input type="checkbox" id="bg-hide" ${o.hide?'checked':''}> ซ่อนรูป</label>
+    <div class="btnrow sep"><button type="button" class="btn" data-act="bgPick">${ic('image',16)}เปลี่ยนรูป</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบรูป</button></div>`;
   if(SEL.kind==='wire'){
     const fl=curFloor(), n=wireDrops(o,fl).filter(Boolean).length;
     return `<div class="ttl">สาย${esc(WIRE_KINDS[o.c][0])}</div>
@@ -2049,6 +2213,8 @@ function pgEdit(){
     <div class="kv"><span>พื้นที่ฐาน</span><b>${f2(Math.abs(area2(o.pts))/2)} ม²</b><span>ปริมาตร</span><b>${f2(Math.abs(area2(o.pts))/2*o.h)} ม³</b></div>
     <h3>วัสดุ</h3><div class="seg sm" style="margin-bottom:8px">${Object.keys(SHAPE_MATS).map(k=>`<button type="button" data-act="smat" data-v="${k}" aria-pressed="${o.mat===k}">${SHAPE_MATS[k]}</button>`).join('')}</div>
     <div class="sw">${swatches(SHAPE_COLORS,o.color,'scol')}</div>
+    <h3>ย่อ / ขยาย (Scale)</h3><div class="seg sm">${[[0.5,'50%'],[0.9,'90%'],[1.1,'110%'],[2,'200%']].map(([v,t])=>`<button type="button" data-act="sscale" data-v="${v}">${t}</button>`).join('')}</div>
+    ${arrHtml()}
     <div class="btnrow sep"><button type="button" class="btn" data-act="rotR">${ic('rotr',16)}หมุน 90°</button><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
   }
   if(SEL.kind==='item'){
@@ -2060,6 +2226,7 @@ function pgEdit(){
     <div class="f3" style="margin-top:8px"><label class="f" for="e-elev">สูงจากพื้น<input id="e-elev" type="number" inputmode="numeric" min="0" value="${cm(o.elev||0)}"></label><label class="f" for="e-rot">หมุน (องศา)<input id="e-rot" type="number" inputmode="numeric" step="15" value="${Math.round(o.rot)}"></label></div>
     <div class="btnrow"><button type="button" class="btn" data-act="rotL">${ic('rotl',16)}หมุนซ้าย</button><button type="button" class="btn" data-act="rotR">${ic('rotr',16)}หมุนขวา</button><button type="button" class="btn" data-act="size0">ขนาดเดิม</button></div>
     ${c.colorable?`<h3>สี</h3><div class="sw">${swatches(ITEM_COLORS,o.color,'icol',true)}</div>`:''}
+    ${arrHtml()}
     <div class="btnrow sep"><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>
     <p class="muted small" style="margin:10px 0 0">${esc(catName(c.cat))} · ขนาดเดิม ${cm(c.w)}×${cm(c.d)}×${cm(c.h)} ซม.</p>`;
   }
@@ -2076,6 +2243,8 @@ function pgEdit(){
     <h3>พื้น</h3><div class="seg sm" style="margin-bottom:8px">${Object.keys(FLOOR_NAMES).map(k=>`<button type="button" data-act="floor" data-v="${k}" aria-pressed="${o.floor===k}">${FLOOR_NAMES[k]}</button>`).join('')}</div>
     <div class="sw">${swatches(FLOOR_COLORS,o.floorColor,'fcol')}</div>
     <h3>สีผนัง</h3><div class="sw">${swatches(WALL_COLORS,o.wallColor,'wcol')}</div>
+    <h3>ลายผนังทั้งห้อง</h3><div class="seg sm" style="flex-wrap:wrap">${Object.keys(WALL_PATS).map(k=>`<button type="button" data-act="wpat" data-v="${k}" aria-pressed="${(o.wallPat||'plain')===k}">${WALL_PATS[k]}</button>`).join('')}</div>
+    ${SEL.wall!=null?(()=>{ const wo=(o.walls||{})[SEL.wall]||{}; return `<h3>ทาเฉพาะผนัง ${SEL.wall+1} (ที่เลือก)</h3><div class="sw">${swatches(WALL_PAINT,wo.c||o.wallColor,'w1col')}</div><div class="seg sm" style="margin-top:8px;flex-wrap:wrap">${Object.keys(WALL_PATS).map(k=>`<button type="button" data-act="w1pat" data-v="${k}" aria-pressed="${(wo.p||o.wallPat||'plain')===k}">${WALL_PATS[k]}</button>`).join('')}</div>${wo.c||wo.p?`<div class="btnrow"><button type="button" class="btn" data-act="w1reset">ใช้แบบเดียวกับทั้งห้อง</button></div>`:''}`; })():`<p class="muted small" style="margin:6px 0 0">อยากทาสีผนังด้านเดียว: แตะ "ผนัง 1, 2, ..." ในรายการด้านบนก่อน</p>`}
     <div class="btnrow sep"><button type="button" class="btn" data-act="dupRoom">${ic('dup',16)}ทำซ้ำห้อง</button><button type="button" class="btn danger${UI.arm==='room'?' armed':''}" data-act="delRoom">${ic('trash',16)}${UI.arm==='room'?'แตะอีกครั้งเพื่อลบห้องและของในห้อง':'ลบห้อง'}</button></div>`;
   }
   const door=o.kind==='door';
@@ -2094,6 +2263,8 @@ function pgInfo(){
   ${P.rooms.length?`<ul class="rooms">${P.rooms.map(r=>{ const st=STATS[r.id]||{area:0,free:0}; return `<li><button type="button" data-act="pickRoom" data-v="${r.id}"><span>${esc(r.name)}</span><span class="num">${f2(st.area)} ม² · ว่าง ${f2(st.free)}</span></button></li>`; }).join('')}</ul>
   <div class="kv"><span>รวมทุกห้อง</span><b>${f2(tA)} ม²</b><span>ว่างรวม</span><b>${f2(tF)} ม²</b><span>ของทั้งหมด</span><b>${P.items.length} ชิ้น</b></div>`:`<p class="empty">ยังไม่มีห้อง ใช้ "วาดห้อง" หรือ "ห้องสี่เหลี่ยม" ด้านข้าง</p>`}
   <div class="btnrow"><button type="button" class="btn" data-act="addRectRoom">+ ห้องสี่เหลี่ยมติดกัน</button><button type="button" class="btn" data-act="fit">${ic('fit',16)}พอดีจอ</button></div>
+  <h3>รูปแปลนสำหรับลอกลาย (${esc(curFloor().name)})</h3>
+  ${BG.data?`<div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="bgEdit">${ic('image',16)}ตั้งค่ารูป</button><button type="button" class="btn" data-act="bgPick">เปลี่ยนรูป</button></div>`:`<div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="bgPick">${ic('image',16)}ใส่รูปแปลน</button></div><p class="muted small" style="margin:6px 0 0">ถ่ายรูปแปลนบ้านแล้วใส่ไว้ใต้แปลน แล้ววาดห้องทับตามรูป</p>`}
   <h3>ชั้นของบ้าน</h3>
   <ul class="rooms">${P.floors.map((f,k)=>`<li class="flrow"><input id="fl-${k}" class="in-name" type="text" value="${esc(f.name)}" aria-label="ชื่อชั้น"><button type="button" class="btn sm${k===P.cur?' pri':''}" data-act="gofloor" data-v="${k}">${k===P.cur?'อยู่ชั้นนี้':'ไปชั้นนี้'}</button>${P.floors.length>1?`<button type="button" class="btn sm danger${UI.arm==='floor:'+k?' armed':''}" data-act="delfloor" data-v="${k}">${UI.arm==='floor:'+k?'ยืนยันลบ':'ลบ'}</button>`:''}</li>`).join('')}</ul>
   <div class="btnrow"><button type="button" class="btn" data-act="addfloor">+ เพิ่มชั้นด้านบน</button></div>
@@ -2125,6 +2296,12 @@ function pgInfo(){
   <div class="seg sm">${[0,1,2,3,4].map(n=>`<button type="button" data-act="rturb" data-v="${n}" aria-pressed="${(rf.turbines|0)===n}">${n?n+' ลูก':'ไม่มี'}</button>`).join('')}</div>
   <label class="chk" style="margin-top:6px"><input type="checkbox" id="u-gvent" ${rf.gableVent?'checked':''}> ช่องระบายหน้าจั่ว (หลังคาจั่ว)</label>
   <label class="chk"><input type="checkbox" id="u-soffit" ${rf.soffit?'checked':''}> ฝ้าชายคาระบายอากาศ</label>
+  <h3>แดดและทิศ (เงาในภาพ 3D)</h3>
+  <div class="rng"><span>เวลา <b id="sunTxt">${fmtHour(UI.sunHour)}</b></span><input id="u-sun" type="range" min="6" max="18" step="0.5" value="${UI.sunHour}" aria-label="เวลาของแดด"></div>
+  <div class="btnrow"><button type="button" class="btn sm" data-act="north" data-v="-45">↺ หมุนทิศเหนือ</button><button type="button" class="btn sm" data-act="north" data-v="45">หมุนทิศเหนือ ↻</button><span class="muted small" style="align-self:center">เหนือ ${Math.round(P.north||0)}°</span></div>
+  <h3>มุมกล้องที่บันทึก</h3>
+  ${(P.views||[]).length?`<div class="vchips">${P.views.map(v=>`<span class="vchip"><button type="button" data-act="goView" data-v="${v.id}">${esc(v.name)}</button><button type="button" data-act="delView" data-v="${v.id}" aria-label="ลบ ${esc(v.name)}">×</button></span>`).join('')}</div>`:`<p class="muted small" style="margin:0">ยังไม่มี · หมุนภาพ 3D ให้ได้มุมที่ชอบ แล้วกดบันทึก</p>`}
+  <div class="btnrow"><button type="button" class="btn" data-act="addView">${ic('cam',16)}บันทึกมุมกล้องนี้</button></div>
   <h3>แสดงบนแปลน</h3>
   <label class="chk"><input type="checkbox" id="u-labels" ${UI.labels?'checked':''}> ชื่อของ</label>
   <label class="chk"><input type="checkbox" id="u-dims" ${UI.dims?'checked':''}> ความยาวผนัง</label>
@@ -2136,6 +2313,8 @@ function pgInfo(){
     <li>3D: ลากเพื่อหมุนรอบ สองนิ้วหรือคลิกขวาเพื่อเลื่อน กด "เดินดู" เพื่อเดินในห้อง</li>
     <li>ปั้นรูปทรง (แบบ SketchUp): แตะวางมุมหรือลากเป็นสี่เหลี่ยม แล้วใน 3D ลากด้านบนขึ้นลงเพื่อดัน/ดึงความสูง</li>
     <li>ไฟฟ้า: วางปลั๊ก สวิตช์ หลอดไฟ ตู้ไฟ จากหมวด "ไฟฟ้า" แล้วกด "สายไฟ" แตะทีละจุดจากตู้ไฟไปหาของ แตะจุดสุดท้ายซ้ำเพื่อจบสาย · ใน 3D กด "เปิดไฟ" ดูตอนกลางคืน</li>
+    <li>วัดระยะ: กด "วัดระยะ" แล้วแตะ 2 จุด · ข้อความ: กด "ข้อความ" แล้วแตะที่แปลน · รูปแปลน: "ใส่รูปแปลน" แล้ววัดเส้นที่รู้ความยาวเพื่อตั้งสเกล</li>
+    <li>รูปทรง: เลือก "วงกลม" ที่แถบล่างได้ · ใส่วัสดุหญ้า น้ำ ทางเดิน กรวด ทำสนามหรือสระได้ · ของและรูปทรงทำซ้ำเป็นแถวได้ที่ "แก้ไข"</li>
     <li>ระบายอากาศ: กด "ใส่บล็อกช่องลม" หรือ "ใส่ช่องเกล็ด" แล้วแตะที่ผนัง · พัดลมดูดอากาศอยู่หมวด "ระบายอากาศ" · ลูกหมุน ช่องหน้าจั่ว ฝ้าชายคา ตั้งได้ที่หัวข้อ "ระบายอากาศ"</li>
     <li>หลังคา: เลือกจั่ว ปั้นหยา เพิงหมาแหงน หรือแบน ปรับชายคา ใส่รางน้ำ และดูโครงหลังคาได้ที่หัวข้อ "หลังคา" ด้านบน</li>
     <li>หลายชั้น: แตะ "ชั้น 1 / ชั้น 2" มุมซ้ายบนเพื่อสลับ กด "+ ชั้น" เพื่อเพิ่มชั้น (คอม: PageUp / PageDown)</li>
@@ -2170,7 +2349,8 @@ function updateFab(){
   if(SEL.kind==='item') h=B('rotR','rotr','หมุน')+B('dup','dup','ทำซ้ำ')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='open') h=(o.kind==='door'?B('flipOut','flip','กลับทางเปิด'):'')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='shape') h=B('rotR','rotr','หมุน')+B('dup','dup','ทำซ้ำ')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
-  else if(SEL.kind==='wire') h=B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
+  else if(SEL.kind==='wire'||SEL.kind==='dim'||SEL.kind==='label') h=B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
+  else if(SEL.kind==='bg') h=B('del','trash','ลบรูป','danger')+B('openEdit','edit','ตั้งค่ารูป');
   else h=B('openEdit','edit','แก้ขนาด สี ผนัง');
   f.innerHTML=h; f.hidden=false;
 }
@@ -2199,6 +2379,9 @@ function delSel(){
   else if(SEL.kind==='open') P.openings=P.openings.filter(x=>x!==o);
   else if(SEL.kind==='shape') P.shapes=P.shapes.filter(x=>x!==o);
   else if(SEL.kind==='wire') P.wires=P.wires.filter(x=>x!==o);
+  else if(SEL.kind==='dim') P.dims=P.dims.filter(x=>x!==o);
+  else if(SEL.kind==='label') P.labels=P.labels.filter(x=>x!==o);
+  else if(SEL.kind==='bg'){ BG.data=null; BG.img=null; bgPut(BG.key,null); select(null,true); need2=true; toast('ลบรูปพื้นหลังแล้ว'); return; }
   else return;
   select(null,true); commit();
 }
@@ -2207,6 +2390,7 @@ function dupSel(){
   if(SEL.kind==='item'){ const c=deep(o); c.id=uid('i'); c.x=rd(o.x+0.15); c.y=rd(o.y+0.15); P.items.push(c); select({kind:'item',id:c.id},true); commit(); }
   else if(SEL.kind==='room') act('dupRoom',{dataset:{}});
   else if(SEL.kind==='shape'){ const c=deep(o); c.id=uid('s'); c.name=o.name+' (สำเนา)'; c.pts=o.pts.map(q=>[rd(q[0]+0.2),rd(q[1]+0.2)]); P.shapes.push(c); select({kind:'shape',id:c.id},true); commit(); }
+  else if(SEL.kind==='label'){ const c=deep(o); c.id=uid('t'); c.x=rd(o.x+0.3); c.y=rd(o.y+0.3); P.labels.push(c); select({kind:'label',id:c.id},true); commit(); }
   else if(SEL.kind==='wire'){ const c=deep(o); c.id=uid('w'); c.pts=o.pts.map(q=>[rd(q[0]+0.2),rd(q[1]+0.2)]); P.wires.push(c); select({kind:'wire',id:c.id},true); commit(); }
 }
 function rotSel(d){
@@ -2228,10 +2412,10 @@ function act(a,el){
     case 'size0': if(o&&SEL.kind==='item'){ const c=C[o.type]; o.w=c.w; o.d=c.d; o.h=c.h; o.elev=c.ceil?rd(P.wallH-c.h):(c.elev||0); commit(); } break;
     case 'icol': if(o&&SEL.kind==='item'){ if(v) o.color=v; else delete o.color; commit(); } break;
     case 'scol': if(o&&SEL.kind==='shape'){ o.color=v; commit(); } break;
-    case 'smat': if(o&&SEL.kind==='shape'){ o.mat=v; if(v==='wood'&&!['#b58a5f','#7a5236'].includes(o.color)) o.color='#b58a5f'; if(v==='glass'&&!['#3f6fb5','#2f7d6b','#f3f1ec'].includes(o.color)) o.color='#8fc3e0'; commit(); } break;
+    case 'smat': if(o&&SEL.kind==='shape'){ o.mat=v; if(v==='wood'&&!['#b58a5f','#7a5236'].includes(o.color)) o.color='#b58a5f'; if(v==='glass'&&!['#3f6fb5','#2f7d6b','#f3f1ec'].includes(o.color)) o.color='#8fc3e0'; if(SURFACE_COLOR[v]){ o.color=SURFACE_COLOR[v]; if(o.h>0.2) o.h=0.03; } commit(); } break;
     case 'pickWall': if(o&&SEL.kind==='room'){ SEL.wall=+v; SEL.corner=null; renderPanel(); need2=true; } break;
-    case 'split': if(o&&SEL.kind==='room'){ const i=+v, n=o.pts.length, list=openingCenters(o), a2=o.pts[i], b2=o.pts[(i+1)%n]; o.pts.splice(i+1,0,[rd((a2[0]+b2[0])/2),rd((a2[1]+b2[1])/2)]); reattach(o,list); SEL.corner=i+1; SEL.wall=null; commit(); toast('เพิ่มมุมกลางผนังแล้ว ลากมุมนั้นเพื่อทำห้องตัว L'); } break;
-    case 'delCorner': if(o&&SEL.kind==='room'&&o.pts.length>3&&SEL.corner!=null){ const list=openingCenters(o); o.pts.splice(SEL.corner,1); reattach(o,list); SEL.corner=null; commit(); } break;
+    case 'split': if(o&&SEL.kind==='room'){ const i=+v, n=o.pts.length, list=openingCenters(o), a2=o.pts[i], b2=o.pts[(i+1)%n]; o.pts.splice(i+1,0,[rd((a2[0]+b2[0])/2),rd((a2[1]+b2[1])/2)]); if(o.walls){ const nw={}; Object.keys(o.walls).forEach(k=>{ const j=+k; nw[j>i?j+1:j]=o.walls[k]; if(j===i) nw[i+1]=deep(o.walls[k]); }); o.walls=nw; } reattach(o,list); SEL.corner=i+1; SEL.wall=null; commit(); toast('เพิ่มมุมกลางผนังแล้ว ลากมุมนั้นเพื่อทำห้องตัว L'); } break;
+    case 'delCorner': if(o&&SEL.kind==='room'&&o.pts.length>3&&SEL.corner!=null){ const list=openingCenters(o), cc=SEL.corner; if(o.walls){ const nw={}; Object.keys(o.walls).forEach(k=>{ const j=+k; if(j!==cc) nw[j>cc?j-1:j]=o.walls[k]; }); o.walls=nw; } o.pts.splice(SEL.corner,1); reattach(o,list); SEL.corner=null; commit(); } break;
     case 'floor': if(o&&SEL.kind==='room'){ o.floor=v; if(v==='grass'&&!['#6aa84f','#4f8a3a'].includes(o.floorColor)) o.floorColor='#6aa84f'; else if(v!=='grass'&&['#6aa84f','#4f8a3a'].includes(o.floorColor)) o.floorColor=FLOOR_COLORS[0]; commit(); } break;
     case 'fcol': if(o&&SEL.kind==='room'){ o.floorColor=v; commit(); } break;
     case 'wcol': if(o&&SEL.kind==='room'){ o.wallColor=v; commit(); } break;
@@ -2259,6 +2443,24 @@ function act(a,el){
     case 'wkind': if(o&&SEL.kind==='wire'){ o.c=v; UI.wireKind=v; commit(); } break;
     case 'delWPt': if(o&&SEL.kind==='wire'&&SEL.i!=null&&o.pts.length>2){ o.pts.splice(SEL.i,1); SEL.i=null; commit(); } break;
     case 'elecCat': UI.cat='elec'; UI.q=''; setTab('add',true); break;
+    case 'sscale': if(o&&SEL.kind==='shape'){ const b=bboxPts(o.pts), cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, k=+v; o.pts=o.pts.map(q=>[rd(cx+(q[0]-cx)*k),rd(cy+(q[1]-cy)*k)]); commit(); } break;
+    case 'arr': if(o&&(SEL.kind==='item'||SEL.kind==='shape')){ const nC=clamp(Math.round(UI.arrN)||1,1,30), gap=Math.max(0,UI.arrGap)/100, dx=v==='r'?1:v==='l'?-1:0, dy=v==='d'?1:v==='u'?-1:0;
+      if(SEL.kind==='item'){ const e=ext(o), st=(dx?e[0]:e[1])+gap; for(let i=1;i<=nC;i++){ const c=deep(o); c.id=uid('i'); c.x=rd(o.x+dx*st*i); c.y=rd(o.y+dy*st*i); P.items.push(c); } }
+      else { const b=bboxPts(o.pts), st=(dx?b.x1-b.x0:b.y1-b.y0)+gap; for(let i=1;i<=nC;i++){ const c=deep(o); c.id=uid('s'); c.name=o.name+' '+(i+1); c.pts=o.pts.map(q=>[rd(q[0]+dx*st*i),rd(q[1]+dy*st*i)]); P.shapes.push(c); } }
+      commit(); toast('ทำซ้ำเพิ่ม '+nC+' ชิ้น ห่างกัน '+cm(gap)+' ซม.'); } break;
+    case 'north': P.north=((((P.north||0)+ +v)%360)+360)%360; commit(); placeSun(); need2=true; break;
+    case 'addView': if(!R3.ok){ toast('เครื่องนี้เปิดภาพ 3D ไม่ได้'); break; } if(UI.view==='2d'){ setView(isWide()?'split':'3d'); toast('หมุนภาพ 3D ให้ได้มุมที่ชอบ แล้วกดบันทึกอีกครั้ง'); break; } P.views=P.views||[]; if(P.views.length>=12){ toast('บันทึกได้สูงสุด 12 มุม'); break; } P.views.push({id:uid('v'),name:'มุม '+(P.views.length+1),floor:P.cur,roof:UI.roof,cam:Object.assign({},CAM)}); commit(); toast('บันทึกมุมกล้องแล้ว'); break;
+    case 'goView': { const vw=(P.views||[]).find(x=>x.id===v); if(!vw) break; goView(vw); break; }
+    case 'delView': P.views=(P.views||[]).filter(x=>x.id!==v); commit(); break;
+    case 'wpat': if(o&&SEL.kind==='room'){ o.wallPat=v; commit(); } break;
+    case 'w1col': case 'w1pat': if(o&&SEL.kind==='room'&&SEL.wall!=null){ o.walls=o.walls||{}; const wo=o.walls[SEL.wall]=o.walls[SEL.wall]||{}; if(a==='w1col') wo.c=v; else wo.p=v; commit(); } break;
+    case 'w1reset': if(o&&SEL.kind==='room'&&SEL.wall!=null&&o.walls){ delete o.walls[SEL.wall]; commit(); } break;
+    case 'lsize': if(o&&SEL.kind==='label'){ o.size=+v; commit(); } break;
+    case 'lcol': if(o&&SEL.kind==='label'){ o.color=v; commit(); } break;
+    case 'bgOp': if(BG.data){ BG.data.op=+v; saveBg(); need2=true; renderPanel(); } break;
+    case 'bgPick': $('bgIn').click(); break;
+    case 'bgEdit': if(BG.data) select({kind:'bg',id:'bg'}); break;
+    case 'bgScale': if(o&&SEL.kind==='dim'){ const rv=parseFloat(($('d-real')||{}).value); if(!(rv>0)){ toast('พิมพ์ความยาวจริงเป็นเซนติเมตรก่อน'); break; } scaleBgByDim(o,rv/100); } break;
     case 'ventCat': UI.cat='vent'; UI.q=''; setTab('add',true); break;
     case 'addVent': UI.openNext=v; setTool('window'); if(UI.view==='3d') setView(isWide()?'split':'2d'); break;
     case 'vtype': if(o&&SEL.kind==='open'&&o.kind==='window'){ o.vent=v; commit(); if(v&&R3.ok&&UI.view==='2d') toast('ดู'+VENTS[v]+'ได้ในภาพ 3D'); } break;
@@ -2314,6 +2516,13 @@ function onField(el,final){
   if(id==='c-q'){ UI.q=el.value; $('c-grid').innerHTML=gridHtml(); document.querySelectorAll('#c-cats .chip').forEach(c=>c.setAttribute('aria-pressed',(!UI.q&&UI.cat===c.dataset.v)?'true':'false')); drawCardThumbs(); return; }
   if(id==='u-labels'||id==='u-dims'){ UI[id==='u-labels'?'labels':'dims']=el.checked; savePrefs(); need2=true; return; }
   if(id==='u-roof'){ setRoof(el.checked); return; }
+  if(id==='bg-w'&&BG.data){ const v=numIn(el,0.5,500); if(v!=null){ BG.data.w=v; saveBg(); need2=true; } return; }
+  if((id==='bg-lock'||id==='bg-hide')&&BG.data){ BG.data[id==='bg-lock'?'lock':'hide']=el.checked; saveBg(); need2=true; return; }
+  if(id==='l-text'&&o&&SEL.kind==='label'){ o.text=el.value.slice(0,80)||'ข้อความ'; need2=true; if(final) commit(); return; }
+  if(id==='d-len'&&o&&SEL.kind==='dim'){ const v=numIn(el,1,100000), L=Math.hypot(o.b[0]-o.a[0],o.b[1]-o.a[1]); if(v!=null&&L>0){ const k=v/100/L; o.b=[rd(o.a[0]+(o.b[0]-o.a[0])*k),rd(o.a[1]+(o.b[1]-o.a[1])*k)]; live(); } if(final) commit(); return; }
+  if(id==='d-real') return;
+  if(id==='a-n'||id==='a-gap'){ const v=parseFloat(el.value); if(isFinite(v)) UI[id==='a-n'?'arrN':'arrGap']=v; return; }
+  if(id==='u-sun'){ UI.sunHour=clamp(+el.value,6,18); const t=$('sunTxt'); if(t) t.textContent=fmtHour(UI.sunHour); placeSun(); if(final) savePrefs(); return; }
   if(id==='u-gutter'){ roofOf(P).gutter=el.checked; commit(); setRoof(true); return; }
   if(id==='u-gvent'||id==='u-soffit'){ roofOf(P)[id==='u-gvent'?'gableVent':'soffit']=el.checked; commit(); setRoof(true); return; }
   if(id==='u-wires'){ UI.wires=el.checked; savePrefs(); need2=true; sync3d(); return; }
@@ -2349,10 +2558,11 @@ function setTool(t){
   TOOL=t; D.pts=[]; D.hover=null;
   if(t==='wire'&&!UI.wires){ UI.wires=true; savePrefs(); sync3d(); }
   if(t!=='window') UI.openNext='';
+  MS.a=null; MS.hover=null;
   HOV=null; if(t!=='select'&&SEL){ SEL=null; renderPanel(); }
   document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t?'true':'false'));
   if(t!=='select'&&UI.view==='3d') setView(isWide()?'split':'2d');
-  let h=''; if(t==='rect') h='ลากเพื่อวาดห้องสี่เหลี่ยม หรือแตะเพื่อวางห้อง 3×3 ม.'; else if(t==='door') h='แตะที่ผนังเพื่อใส่ประตู'; else if(t==='window') h='แตะที่ผนังเพื่อใส่'+(VENTS[UI.openNext]||'หน้าต่าง');
+  let h=''; if(t==='rect') h='ลากเพื่อวาดห้องสี่เหลี่ยม หรือแตะเพื่อวางห้อง 3×3 ม.'; else if(t==='door') h='แตะที่ผนังเพื่อใส่ประตู'; else if(t==='window') h='แตะที่ผนังเพื่อใส่'+(VENTS[UI.openNext]||'หน้าต่าง'); else if(t==='measure') h='แตะจุดแรก แล้วแตะจุดที่สองเพื่อวัดระยะ'; else if(t==='text') h='แตะบนแปลนเพื่อวางข้อความ';
   $('hint').textContent=h; $('hint').hidden=!h; $('drawBar').hidden=!isDraw(); $('scaleBar').hidden=t!=='select';
   if(isDraw()) updDrawBar();
   cv2.style.cursor=t==='select'?'grab':'crosshair'; updateFab(); need2=true;
@@ -2381,7 +2591,8 @@ $('roofBtn').addEventListener('click',()=>{ setRoof(!UI.roof); toast(UI.roof?'�
 $('undoBtn').addEventListener('click',undo); $('redoBtn').addEventListener('click',redo);
 $('dbUndo').addEventListener('click',()=>{ D.pts.pop(); updDrawBar(); need2=true; });
 $('dbClose').addEventListener('click',finishDraw);
-$('dbKinds').addEventListener('click',e=>{ const b=e.target.closest('[data-wk]'); if(!b) return; UI.wireKind=b.dataset.wk; updDrawBar(); });
+$('bgIn').addEventListener('change',e=>{ const fl=e.target.files&&e.target.files[0]; e.target.value=''; if(fl) pickBgFile(fl); });
+$('dbKinds').addEventListener('click',e=>{ const b=e.target.closest('[data-wk],[data-sm]'); if(!b) return; if(b.dataset.sm){ UI.shapeMode=b.dataset.sm; D.pts=[]; need2=true; } else UI.wireKind=b.dataset.wk; updDrawBar(); });
 $('lightBtn').addEventListener('click',()=>setNight(!UI.night));
 $('dbCancel').addEventListener('click',()=>setTool('select'));
 $('dbLen').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); drawTyped(); } });
@@ -2546,8 +2757,8 @@ function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; 
 function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
 function loadLocal(){ const s=lsGet(LSK); let o={}; if(s){ try{ o=JSON.parse(s)||{}; }catch(e){} } const out={}; Object.keys(o).forEach(id=>{ const p=cleanProject(o[id]); if(p) out[p.id]=p; }); return out; }
 function saveLocal(){ const o=Object.assign({},ALL); if(AUTO) delete o[AUTO]; lsSet(LSK,JSON.stringify(o)); }
-function savePrefs(){ lsSet(LSU,JSON.stringify({view:UI.view,labels:UI.labels,dims:UI.dims,wallMode:UI.wallMode,roof:UI.roof,wires:UI.wires,roofView:UI.roofView})); }
-function loadPrefs(){ try{ const o=JSON.parse(lsGet(LSU)||'{}'); if(o.view) UI.view=o.view; if(typeof o.labels==='boolean') UI.labels=o.labels; if(typeof o.dims==='boolean') UI.dims=o.dims; if(o.wallMode) UI.wallMode=o.wallMode; if(typeof o.roof==='boolean') UI.roof=o.roof; if(typeof o.wires==='boolean') UI.wires=o.wires; if(ROOF_VIEWS.some(v=>v[0]===o.roofView)) UI.roofView=o.roofView; }catch(e){} }
+function savePrefs(){ lsSet(LSU,JSON.stringify({view:UI.view,labels:UI.labels,dims:UI.dims,wallMode:UI.wallMode,roof:UI.roof,wires:UI.wires,roofView:UI.roofView,sunHour:UI.sunHour})); }
+function loadPrefs(){ try{ const o=JSON.parse(lsGet(LSU)||'{}'); if(o.view) UI.view=o.view; if(typeof o.labels==='boolean') UI.labels=o.labels; if(typeof o.dims==='boolean') UI.dims=o.dims; if(o.wallMode) UI.wallMode=o.wallMode; if(typeof o.roof==='boolean') UI.roof=o.roof; if(typeof o.wires==='boolean') UI.wires=o.wires; if(ROOF_VIEWS.some(v=>v[0]===o.roofView)) UI.roofView=o.roofView; if(o.sunHour>=6&&o.sunHour<=18) UI.sunHour=+o.sunHour; }catch(e){} }
 function setSave(s){ const t={saving:'กำลังบันทึก…',cloud:'บันทึกแล้ว',local:'บันทึกในเครื่องนี้',err:'บันทึกไม่สำเร็จ',retry:'กำลังลองใหม่…'}[s]||''; $('saveTxt').textContent=t; $('saveDot').dataset.s=s; $('saveDot').title=t; }
 function saveSoon(){
   if(!P) return; P.updated=Date.now(); ALL[P.id]=P; setSave('saving');
