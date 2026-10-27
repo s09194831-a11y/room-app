@@ -1,4 +1,4 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body><title>ลองจัดห้อง</title>
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#e6eae6"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style></head><body><title>ลองจัดห้อง</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
@@ -32,9 +32,13 @@
   --item-line:rgba(220,229,231,.4); --scene:#1a2327; --ground:#20292d; --scrim:rgba(0,0,0,.6);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.3); color-scheme:dark;
 }
-html{height:100%;box-sizing:border-box}
+html{height:100%;box-sizing:border-box;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
+@supports (height:100dvh){html{height:100dvh}}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
+.app,.home{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+input{-webkit-user-select:text;user-select:text}
+@media (pointer:coarse){input{font-size:16px!important}}
 body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--font-body);overflow:hidden;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:disabled{opacity:.4;cursor:default}
@@ -82,7 +86,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .fab button{height:34px;padding:0 9px;display:inline-flex;align-items:center;gap:6px;border-radius:8px;font-size:12.5px;white-space:nowrap}
 .fab button:hover{background:var(--accent-soft)}
 .fab .danger{color:var(--warn)}
-@media (max-width:599px){.fab .fl,.ovb span,.ib.lb span,#redoBtn,.brand,.curp{display:none}.myplans{padding:0 10px;font-size:13.5px}.fab button{padding:0 10px}.ib.lb{width:36px;padding:0;justify-content:center}.ov{flex-direction:column}.bar{gap:6px}}
+@media (max-width:599px){.fab .fl,.ovb span,.ib.lb span,#redoBtn,.brand,.curp{display:none}.myplans{padding:0 10px;font-size:13.5px}.seg button{padding:0 9px}.fab button{padding:0 10px}.ib.lb{width:36px;padding:0;justify-content:center}.ov{flex-direction:column}.bar{gap:6px}}
+@media (max-width:359px){.myplans span{display:none}.myplans{width:36px;padding:0;justify-content:center}.bar{gap:4px}.seg button{padding:0 7px}}
 .joy{position:absolute;left:16px;bottom:16px;width:116px;height:116px;border-radius:50%;background:var(--surface);opacity:.9;border:1px solid var(--line);box-shadow:var(--shadow);touch-action:none}
 .knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:var(--accent);pointer-events:none}
 .hint3{position:absolute;right:12px;bottom:12px;max-width:calc(100% - 160px);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:12.5px;color:var(--muted);box-shadow:var(--shadow)}
@@ -181,7 +186,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   .sheetTog{display:grid}
   .side[data-open="0"] .sbody{display:none}
   .side[data-open="0"]{border-radius:12px}
-  .sbody{max-height:min(42vh,420px)}
+  .sbody{max-height:min(42vh,420px);max-height:min(42dvh,420px)}
   .hint3{display:none}
 }
 </style>
@@ -298,6 +303,8 @@ function shade(hex,amt){
   return '#'+((1<<24)|(f((n>>16)&255)<<16)|(f((n>>8)&255)<<8)|f(n&255)).toString(16).slice(1);
 }
 document.documentElement.lang='th';
+/* iPhone/iPad: กันหน้าเว็บซูมทั้งหน้าเมื่อใช้สองนิ้ว (ซูมแปลนยังทำงานผ่าน pointer events ของ canvas) */
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 
 /* ---------------- ไอคอน ---------------- */
 const IC={
@@ -1771,14 +1778,19 @@ async function cloudWrite(id){
   Store.busy[id]=false;
   if(Store.again[id]){ Store.again[id]=false; cloudWrite(id); }
 }
+/* เซฟเข้าบัญชีได้เฉพาะตอนเปิดผ่านลิงก์ Claude; เว็บ GitHub Pages กับไฟล์ในเครื่องเซฟในเบราว์เซอร์ของเครื่องนั้น */
 async function initCloud(){
   if(!window.claude||!window.claude.use){ setSave('local'); return; }
   const [db,user]=await Promise.all([capP('db'),capP('user')]);
   if(!db||!user){ setSave('local'); return; }
   let id=null; try{ id=await user.id(); }catch(e){}
   if(!id){ setSave('local'); return; }
-  let snap; try{ Store.col=db.collection('data/users/'+id); snap=await Store.col.get(); }catch(e){ setSave('local'); return; }
-  Store.mode='cloud';
+  let col; try{ col=db.collection('data/users/'+id); }catch(e){ setSave('local'); return; }
+  await connectCloud(col);
+}
+async function connectCloud(col){
+  let snap; try{ snap=await col.get(); }catch(e){ setSave('local'); return false; }
+  Store.col=col; Store.mode='cloud';
   const cloud={}; snap.docs.forEach(d=>{ if(!d.exists) return; const p=unpack(d.id,d.data()); if(p) cloud[p.id]=p; });
   const hadCloud=Object.keys(cloud).length>0;
   if(hadCloud&&AUTO&&!cloud[AUTO]){ delete ALL[AUTO]; AUTO=null; }
@@ -1789,6 +1801,7 @@ async function initCloud(){
   if(!P||!ALL[P.id]) openProject(mostRecent());
   else if(ALL[P.id]!==P){ P=ALL[P.id]; openProject(P.id); }
   subscribeCurrent(); setSave('cloud'); if(UI.home) renderHome();
+  return true;
 }
 function subscribeCurrent(){
   if(Store.unsub){ try{ Store.unsub(); }catch(e){} Store.unsub=null; }
@@ -1931,7 +1944,7 @@ applyCam();
 requestAnimationFrame(loop);
 showHome();
 initCloud().catch(()=>setSave('local'));
-window.__room={get P(){return P;},C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf};
+window.__room={get P(){return P;},C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf,showHome};
 })();
 </script>
 </body></html>
