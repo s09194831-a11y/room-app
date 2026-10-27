@@ -186,6 +186,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .ib.armed{width:auto;padding:0 10px;background:var(--warn);border-color:var(--warn);color:var(--surface);font-size:12.5px;font-weight:600}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(10px);opacity:0;pointer-events:none;background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:9px;font-size:13.5px;box-shadow:var(--shadow);transition:opacity .2s,transform .2s;z-index:60;max-width:calc(100% - 32px);text-align:center}
 .toast.on{opacity:1;transform:translateX(-50%)}
+.drawbar input[type="range"]{width:170px;max-width:42vw;height:auto;padding:0;border:0;background:none;accent-color:var(--accent)}
+.stage[data-view="3d"] .p3d .drawbar{bottom:58px}
+.p3d .ov{max-width:min(calc(100% - 20px),450px)}
+.pmodal{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:16px;background:var(--scrim)}
+.pbox{width:min(940px,100%);display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pview{height:min(54vh,440px);height:min(54dvh,440px);border-radius:10px;background-color:#000;background-repeat:repeat-x;background-size:auto 100%;cursor:grab;touch-action:none}
 @keyframes pulse{50%{opacity:.3}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}.dot[data-s="saving"]{animation:none}}
 @media (max-width:899px){
@@ -220,6 +227,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 
   <nav class="tools" id="tools" aria-label="เครื่องมือ">
     <button class="tool" type="button" data-tool="select" data-ic="select"><span>เลือก/ย้าย</span></button>
+    <button class="tool" type="button" data-tool="multi" data-ic="multi"><span>เลือกหลายชิ้น</span></button>
     <button class="tool" type="button" data-tool="room" data-ic="room"><span>วาดห้อง</span></button>
     <button class="tool" type="button" data-tool="rect" data-ic="rect"><span>ห้องสี่เหลี่ยม</span></button>
     <button class="tool" type="button" data-tool="shape" data-ic="cube"><span>ปั้นรูปทรง</span></button>
@@ -257,9 +265,24 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
         <button class="ovb" id="roofBtn" type="button" aria-pressed="false" aria-label="หลังคา" title="เปิดหรือปิดหลังคา" data-ic="roof" data-is="18"><span>หลังคา</span></button>
         <button class="ovb" id="lightBtn" type="button" aria-pressed="false" aria-label="เปิดไฟ" title="เปิดไฟ ดูตอนกลางคืน" data-ic="bulb" data-is="18"><span>เปิดไฟ</span></button>
         <button class="ovb" id="wallBtn" type="button" title="ความสูงผนัง" data-ic="walls" data-is="18"><span id="wallTxt">ผนังอัตโนมัติ</span></button>
+        <button class="ovb" id="xrayBtn" type="button" aria-pressed="false" aria-label="ผนังโปร่ง" title="ผนังโปร่ง มองทะลุผนัง (X-ray)" data-ic="xray" data-is="18"><span>โปร่ง</span></button>
+        <button class="ovb" id="secBtn" type="button" aria-pressed="false" aria-label="ตัดดูข้างใน" title="ตัดดูข้างใน (Section)" data-ic="section" data-is="18"><span>ตัดดู</span></button>
         <button class="ovb" id="walkBtn" type="button" aria-pressed="false" aria-label="เดินดู" data-ic="walk" data-is="18"><span>เดินดู</span></button>
+        <button class="ovb" id="panoBtn" type="button" aria-label="ภาพ 360 องศา" title="ทำภาพ 360 องศา จากจุดที่ยืน" data-ic="pano" data-is="18"><span>360°</span></button>
         <button class="ovb" id="fit3" type="button" aria-label="มุมเริ่มต้น" title="มุมเริ่มต้น" data-ic="fit" data-is="18"></button>
         <button class="ovb" id="shot3" type="button" aria-label="บันทึกรูป 3D" title="บันทึกรูป 3D" data-ic="cam" data-is="18"></button>
+      </div>
+      <div class="drawbar" id="secBar" hidden>
+        <span class="seg sm" id="secAx"><button type="button" data-ax="x">ตัดขวาง</button><button type="button" data-ax="z">ตัดยาว</button><button type="button" data-ax="y">ตัดแนวนอน</button></span>
+        <input id="secPos" type="range" min="0" max="1" step="0.005" value="0.5" aria-label="ตำแหน่งที่ตัด">
+        <button class="btn sm" id="secFlip" type="button">กลับด้าน</button>
+        <button class="btn sm" id="secOff" type="button">ปิด</button>
+      </div>
+      <div class="drawbar" id="terraBar" hidden>
+        <span id="tbTxt">ลากขึ้น = ยกเนิน · ลากลง = ขุดแอ่ง</span>
+        <span class="seg sm" id="tbMode"><button type="button" data-tm="raise">ยก/ขุด</button><button type="button" data-tm="smooth">เกลี่ย</button><button type="button" data-tm="flat">ทำราบ</button></span>
+        <span class="seg sm" id="tbSize"><button type="button" data-ts="1">1 ม.</button><button type="button" data-ts="2">2 ม.</button><button type="button" data-ts="3.5">3.5 ม.</button></span>
+        <button class="btn sm pri" id="tbDone" type="button">เสร็จ</button>
       </div>
       <div class="joy" id="joy" hidden><div class="knob" id="knob"></div></div>
       <div class="hint3" id="hint3" hidden>W A S D หรือปุ่มลูกศรเพื่อเดิน · ลากเพื่อหันมอง</div>
@@ -296,6 +319,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     </div>
   </div>
 </section>
+<div class="pmodal" id="panoBox" hidden role="dialog" aria-modal="true" aria-labelledby="panoTtl">
+  <div class="pbox">
+    <div class="phead"><b class="ttl" id="panoTtl">ภาพ 360°</b><span class="muted small">ลากรูปไปซ้าย-ขวาเพื่อหมุนดูรอบตัว</span><span class="grow"></span><button class="ib" id="panoClose" type="button" aria-label="ปิด" data-ic="x"></button></div>
+    <div class="pview" id="panoView" role="img" aria-label="ภาพ 360 องศาของห้อง"></div>
+    <div class="btnrow" style="margin-top:0;align-items:center"><button class="btn pri" id="panoSave" type="button">บันทึกรูป 360°</button><span class="muted small">ส่งเข้า Facebook หรือ Google Photos แล้วจะหมุนดูได้</span></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="fileIn" accept="application/json,.json" hidden>
 <input type="file" id="bgIn" accept="image/*" hidden>
@@ -360,6 +390,13 @@ const IC={
   image:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4.5 3.5"/>',
   bulb:'<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
   grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  multi:'<rect x="3.5" y="3.5" width="17" height="17" rx="1.5" stroke-dasharray="3 2.6"/><path d="M9 8.5l8 4-3.4 1-1.6 3.4z"/>',
+  group:'<rect x="3.5" y="3.5" width="8" height="8" rx="1.2"/><rect x="12.5" y="12.5" width="8" height="8" rx="1.2"/><path d="M14 4.5h5.5V10M10 19.5H4.5V14"/>',
+  xray:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" stroke-dasharray="2.6 2.2"/><circle cx="12" cy="12" r="2.6"/>',
+  section:'<path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M2 12.5h20" stroke-dasharray="2.4 2"/>',
+  pano:'<path d="M3.5 8.5q8.5-3 17 0v7q-8.5 3-17 0z"/><circle cx="12" cy="12" r="1.7"/>',
+  hill:'<path d="M2.5 19l6-8 4 5 3-3.5 6 6.5z"/><circle cx="17" cy="6.5" r="1.8"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
   pdf:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 16.5v-4h1.6a1.3 1.3 0 0 1 0 2.6H9M13.5 16.5v-4h1a2 2 0 0 1 0 4z"/>'
 };
 const ic=(n,s)=>`<svg viewBox="0 0 24 24" width="${s||20}" height="${s||20}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -908,32 +945,34 @@ function overlapItems(a,b){
   for(const ax of axes){ let mnA=1e9,mxA=-1e9,mnB=1e9,mxB=-1e9; for(let t=0;t<4;t++){ const da=pa[t][0]*ax[0]+pa[t][1]*ax[1], db=pb[t][0]*ax[0]+pb[t][1]*ax[1]; if(da<mnA)mnA=da; if(da>mxA)mxA=da; if(db<mnB)mnB=db; if(db>mxB)mxB=db; } if(mxA<=mnB||mxB<=mnA) return false; }
   return true;
 }
-const topOf=it=>(it.elev||0)+it.h;
-function ignorePair(a,b){ const A=C[a.type]||{}, B=C[b.type]||{}; if(A.flat||B.flat||A.elec||B.elec) return true; if((A.tuck&&B.table)||(B.tuck&&A.table)) return true; if((A.table&&(b.elev||0)>=0.6)||(B.table&&(a.elev||0)>=0.6)) return true; return !((a.elev||0)<topOf(b)-0.005&&(b.elev||0)<topOf(a)-0.005); }
+const topOf=it=>(it.elev||0)+(it.tx||it.tz?-2*tiltLow(it):it.h);
+function ignorePair(a,b){ const A=C[a.type]||{}, B=C[b.type]||{}; if(A.flat||B.flat||A.elec||B.elec) return true; if(a.on===b.id||b.on===a.id) return true; if((A.tuck&&B.table)||(B.tuck&&A.table)) return true; if((A.table&&(b.elev||0)>=0.6)||(B.table&&(a.elev||0)>=0.6)) return true; return !((a.elev||0)<topOf(b)-0.005&&(b.elev||0)<topOf(a)-0.005); }
 function raySeg(px,py,dx,dy,ax,ay,bx,by){ const ex=bx-ax, ey=by-ay, den=dx*ey-dy*ex; if(Math.abs(den)<1e-9) return null; const t=((ax-px)*ey-(ay-py)*ex)/den, u=((ax-px)*dy-(ay-py)*dx)/den; if(t<-1e-6||u<-1e-6||u>1+1e-6) return null; return t; }
 
 /* ---------------- ข้อมูลแปลน ---------------- */
 let P=null, ALL={}, SEL=null, TOOL='select', AUTO=null;
 let PROB={}, STATS={};
-const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null,wires:true,roofView:'skin',night:false,wireKind:'light',openNext:'',shapeMode:'poly',arrN:3,arrGap:10,sunHour:10};
+const UI={view:isWide()?'split':'2d',labels:true,dims:true,tab:'add',open:false,cat:'mine',q:'',wallMode:'auto',roof:false,arm:null,home:false,renaming:null,wires:true,roofView:'skin',night:false,wireKind:'light',openNext:'',shapeMode:'poly',arrN:3,arrGap:10,sunHour:10,xray:false,sec:{on:false,ax:'x',t:0.5,flip:false},terra:false,tMode:'raise',tSize:2,offD:10,bulge:60};
 const getItem=id=>P.items.find(o=>o.id===id);
 const getRoom=id=>P.rooms.find(o=>o.id===id);
 const getOpen=id=>P.openings.find(o=>o.id===id);
 const getShape=id=>P.shapes.find(o=>o.id===id);
 const getWire=id=>P.wires.find(o=>o.id===id);
-function selObj(){ if(!SEL||!P) return null; return SEL.kind==='item'?getItem(SEL.id):SEL.kind==='room'?getRoom(SEL.id):SEL.kind==='shape'?getShape(SEL.id):SEL.kind==='wire'?getWire(SEL.id):SEL.kind==='dim'?getDim(SEL.id):SEL.kind==='label'?getLabel(SEL.id):SEL.kind==='bg'?BG.data:getOpen(SEL.id); }
+function selObj(){ if(!SEL||!P) return null; return SEL.kind==='multi'?multiObj():SEL.kind==='item'?getItem(SEL.id):SEL.kind==='room'?getRoom(SEL.id):SEL.kind==='shape'?getShape(SEL.id):SEL.kind==='wire'?getWire(SEL.id):SEL.kind==='dim'?getDim(SEL.id):SEL.kind==='label'?getLabel(SEL.id):SEL.kind==='bg'?BG.data:getOpen(SEL.id); }
 function roomAt(x,y){ for(let i=P.rooms.length-1;i>=0;i--) if(pip(x,y,P.rooms[i].pts)) return P.rooms[i]; return null; }
 /* แปลนหนึ่งอันมีได้หลายชั้น: p.floors[k] = {rooms, openings, items}; p.rooms / p.openings / p.items ชี้ไปที่ชั้นที่เปิดอยู่ (p.cur) */
 const SLAB=0.2;
-function newFloor(k){ return {id:uid('f'),name:'ชั้น '+(k+1),rooms:[],openings:[],items:[],shapes:[],wires:[],dims:[],labels:[]}; }
+function newFloor(k){ return {id:uid('f'),name:'ชั้น '+(k+1),rooms:[],openings:[],items:[],shapes:[],wires:[],dims:[],labels:[],groups:[]}; }
 /* รูปทรงที่ปั้นเอง (แบบ SketchUp): {id,name,pts,h,elev,color,mat} พื้นรูปหลายเหลี่ยม ดึงขึ้นสูง h จากระดับ elev */
 const SHAPE_MATS={plain:'สีเรียบ',wood:'ไม้',concrete:'ปูน',glass:'กระจก',grass:'หญ้า',water:'น้ำ',paving:'ทางเดิน',gravel:'กรวด'};
 const SURFACE_COLOR={grass:'#6aa84f',water:'#4a90c8',paving:'#c9c2b5',gravel:'#a39c90'};
+/* Follow Me: รูปหน้าตัดวิ่งไปตามเส้นทาง s.pts (ไม่ปิด) กว้าง sweep.w สูง s.h ลอยจากพื้น s.elev */
+const SWEEP_PROFS={round:'ท่อกลม',square:'เหลี่ยม',curb:'ขอบคันหิน',cove:'บัวโค้ง',tri:'สามเหลี่ยม'};
 /* ลายผนัง (ทาสีทีละด้านได้: room.walls[i] = {c:สี, p:ลาย}) */
 const WALL_PATS={plain:'เรียบ',brick:'อิฐ',stripe:'ลายทาง',tile:'กระเบื้อง',wood:'ไม้'};
 const WALL_PAINT=['#f4f2ed','#ece7dc','#e6ebe4','#e3e9f0','#f0e4d8','#efe3bf','#c2263f','#d0763a','#e8b931','#2f7d6b','#3f6fb5','#7a5236','#5b6670','#2b2d31'];
 const SHAPE_COLORS=['#d9d4ca','#f3f1ec','#b58a5f','#7a5236','#9aa1a8','#5b6670','#2b2d31','#3f6fb5','#2f7d6b','#6aa84f','#c2263f','#e8b931'];
-function attachFloors(p){ ['rooms','openings','items','shapes','wires','dims','labels'].forEach(k=>Object.defineProperty(p,k,{configurable:true,enumerable:false,get(){ return this.floors[this.cur][k]; },set(v){ this.floors[this.cur][k]=v; }})); return p; }
+function attachFloors(p){ ['rooms','openings','items','shapes','wires','dims','labels','groups'].forEach(k=>Object.defineProperty(p,k,{configurable:true,enumerable:false,get(){ return this.floors[this.cur][k]; },set(v){ this.floors[this.cur][k]=v; }})); return p; }
 function blankProject(name){ return attachFloors({v:2,id:uid('p'),name:name||'แปลนห้อง',updated:Date.now(),wallH:2.5,wallT:0.1,roof:newRoof(),floors:[newFloor(0)],cur:0}); }
 const elevOf=k=>k*(P.wallH+SLAB);
 const curFloor=()=>P.floors[P.cur];
@@ -1029,23 +1068,34 @@ function cleanProject(p){
       const o={id:String(it.id||uid('i')),type,x:num(it.x,0),y:num(it.y,0),rot:((num(it.rot,0)%360)+360)%360,w:clamp(num(it.w,c.w),0.01,20),d:clamp(num(it.d,c.d),0.01,20),h:clamp(num(it.h,c.h),0.005,6),elev:clamp(num(it.elev,c.elev||0),0,6)};
       if(it.name) o.name=String(it.name).slice(0,60);
       if(validColor(it.color)) o.color=it.color;
+      if(typeof it.on==='string'&&it.on) o.on=it.on.slice(0,40);
+      if(num(it.tx,0)) o.tx=clamp(+it.tx,-180,180); if(num(it.tz,0)) o.tz=clamp(+it.tz,-180,180);
+      if(typeof it.grp==='string'&&it.grp) o.grp=it.grp.slice(0,40);
       fl.items.push(o);
     });
+    const iid=new Set(fl.items.map(i=>i.id)); fl.items.forEach(i=>{ if(i.on&&(!iid.has(i.on)||i.on===i.id)) delete i.on; });
     (Array.isArray(f.shapes)?f.shapes:[]).forEach(s=>{
-      if(!s||!Array.isArray(s.pts)) return; const pts=s.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]); if(pts.length<3) return;
-      fl.shapes.push({id:String(s.id||uid('s')),name:String(s.name||'รูปทรง').slice(0,60),pts,h:clamp(num(s.h,1),0.01,30),elev:clamp(num(s.elev,0),0,30),color:validColor(s.color)||SHAPE_COLORS[0],mat:SHAPE_MATS[s.mat]?s.mat:'plain'});
+      if(!s||!Array.isArray(s.pts)) return; const pts=s.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]); const sw=s.sweep&&typeof s.sweep==='object'?s.sweep:null; if(pts.length<(sw?2:3)) return;
+      const o={id:String(s.id||uid('s')),name:String(s.name||'รูปทรง').slice(0,60),pts,h:clamp(num(s.h,1),0.01,30),elev:clamp(num(s.elev,0),0,30),color:validColor(s.color)||SHAPE_COLORS[0],mat:SHAPE_MATS[s.mat]?s.mat:'plain'};
+      if(sw) o.sweep={prof:SWEEP_PROFS[sw.prof]?sw.prof:'round',w:clamp(num(sw.w,0.08),0.01,5),closed:!!sw.closed&&pts.length>2,posts:!!sw.posts};
+      else if(Array.isArray(s.hole)){ const hp=s.hole.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]); if(hp.length>=3) o.hole=hp; }
+      if(typeof s.grp==='string'&&s.grp) o.grp=s.grp.slice(0,40);
+      fl.shapes.push(o);
     });
+    fl.groups=(Array.isArray(f.groups)?f.groups:[]).filter(g=>g&&typeof g.id==='string'&&g.id).map(g=>({id:g.id.slice(0,40),name:String(g.name||'กลุ่ม').slice(0,40)}));
     (Array.isArray(f.wires)?f.wires:[]).forEach(w=>{
       if(!w||!Array.isArray(w.pts)) return; const pts=w.pts.filter(a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1])).map(a=>[+a[0],+a[1]]); if(pts.length<2) return;
       fl.wires.push({id:String(w.id||uid('w')),pts,c:WIRE_KINDS[w.c]?w.c:'light'});
     });
     const P2v=a=>Array.isArray(a)&&isFinite(a[0])&&isFinite(a[1]);
     (Array.isArray(f.dims)?f.dims:[]).forEach(d=>{ if(d&&P2v(d.a)&&P2v(d.b)) fl.dims.push({id:String(d.id||uid('d')),a:[+d.a[0],+d.a[1]],b:[+d.b[0],+d.b[1]]}); });
-    (Array.isArray(f.labels)?f.labels:[]).forEach(l=>{ if(l&&isFinite(l.x)&&isFinite(l.y)) fl.labels.push({id:String(l.id||uid('t')),x:+l.x,y:+l.y,text:String(l.text||'ข้อความ').slice(0,80),size:clamp(num(l.size,0.25),0.05,2),color:validColor(l.color)||'#1d282d'}); });
+    (Array.isArray(f.labels)?f.labels:[]).forEach(l=>{ if(!l||!isFinite(l.x)||!isFinite(l.y)) return; const o={id:String(l.id||uid('t')),x:+l.x,y:+l.y,text:String(l.text||'ข้อความ').slice(0,80),size:clamp(num(l.size,0.25),0.05,2),color:validColor(l.color)||'#1d282d'};
+      if(num(l.rot,0)) o.rot=((num(l.rot,0)%360)+360)%360; if(num(l.d3,0)>0){ o.d3=clamp(+l.d3,0.005,1); o.up=!!l.up; o.elev=clamp(num(l.elev,0),0,30); } fl.labels.push(o); });
     return fl;
   });
   q.cur=clamp(Math.floor(num(p.cur,0)),0,q.floors.length-1);
   q.north=((num(p.north,0)%360)+360)%360;
+  const tr=p.terrain; if(tr&&Array.isArray(tr.h)){ const nx=clamp(Math.floor(num(tr.nx,0)),1,200), ny=clamp(Math.floor(num(tr.ny,0)),1,200); if(tr.h.length===(nx+1)*(ny+1)) q.terrain={x0:num(tr.x0,0),y0:num(tr.y0,0),cell:clamp(num(tr.cell,0.5),0.1,5),nx,ny,h:tr.h.map(v=>clamp(Math.round(num(v,0)),-500,1500)),color:validColor(tr.color)||'#6aa84f'}; }
   q.views=(Array.isArray(p.views)?p.views:[]).slice(0,12).filter(v=>v&&v.cam).map(v=>({id:String(v.id||uid('v')),name:String(v.name||'มุมกล้อง').slice(0,40),floor:clamp(Math.floor(num(v.floor,0)),0,q.floors.length-1),roof:!!v.roof,cam:['tx','ty','tz','yaw','pitch','dist'].reduce((o,k)=>(o[k]=num(v.cam[k],0),o),{})}));
   return q;
 }
@@ -1130,22 +1180,22 @@ function computeStats(){
   P.rooms.forEach(r=>{
     const A=Math.abs(area2(r.pts))/2, b=bboxPts(r.pts), st=0.05; let tot=0, free=0;
     const its=P.items.filter(it=>!isFlat(it)&&!isElec(it)&&(it.elev||0)<1.0).filter(it=>{ const e=ext(it); return it.x+e[0]/2>b.x0&&it.x-e[0]/2<b.x1&&it.y+e[1]/2>b.y0&&it.y-e[1]/2<b.y1; });
-    const shs=P.shapes.filter(s=>s.elev<1.0);
-    for(let y=b.y0+st/2;y<b.y1;y+=st) for(let x=b.x0+st/2;x<b.x1;x+=st){ if(!pip(x,y,r.pts)) continue; tot++; if(!its.some(it=>inItem(it,x,y,0))&&!shs.some(s=>pip(x,y,s.pts))) free++; }
+    const shs=P.shapes.filter(s=>s.elev<1.0&&!s.sweep);
+    for(let y=b.y0+st/2;y<b.y1;y+=st) for(let x=b.x0+st/2;x<b.x1;x+=st){ if(!pip(x,y,r.pts)) continue; tot++; if(!its.some(it=>inItem(it,x,y,0))&&!shs.some(s=>pip(x,y,s.pts)&&!(s.hole&&pip(x,y,s.hole)))) free++; }
     STATS[r.id]={area:A,free:tot?A*free/tot:A};
   });
 }
 
 /* ---------------- ย้อนกลับ ---------------- */
 const HIST={u:[],r:[],cur:''};
-const snapState=()=>JSON.stringify({name:P.name,wallH:P.wallH,wallT:P.wallT,roof:roofOf(P),floors:P.floors,north:P.north||0,views:P.views||[]});
+const snapState=()=>JSON.stringify({name:P.name,wallH:P.wallH,wallT:P.wallT,roof:roofOf(P),floors:P.floors,north:P.north||0,views:P.views||[],terrain:P.terrain||null});
 function resetHistory(){ HIST.u=[]; HIST.r=[]; HIST.cur=snapState(); updUndo(); }
 function updUndo(){ $('undoBtn').disabled=!HIST.u.length; $('redoBtn').disabled=!HIST.r.length; }
 function commit(){
-  const s=snapState(); if(s!==HIST.cur){ HIST.u.push(HIST.cur); if(HIST.u.length>100) HIST.u.shift(); HIST.r=[]; HIST.cur=s; if(P.id===AUTO) AUTO=null; saveSoon(); updUndo(); }
+  tidyGroups(); const s=snapState(); if(s!==HIST.cur){ HIST.u.push(HIST.cur); if(HIST.u.length>100) HIST.u.shift(); HIST.r=[]; HIST.cur=s; if(P.id===AUTO) AUTO=null; saveSoon(); updUndo(); }
   refreshAfter(); const ae=document.activeElement; if(!(ae&&ae.closest&&ae.closest('#side')&&/INPUT/.test(ae.tagName))) renderPanel(); else refreshStatus();
 }
-function restore(s){ const o=JSON.parse(s); Object.assign(P,{name:o.name,wallH:o.wallH,wallT:o.wallT,roof:o.roof,floors:o.floors,north:o.north||0,views:o.views||[]}); P.cur=Math.min(P.cur,P.floors.length-1); if(SEL&&!selObj()) SEL=null; refreshAfter(); renderPanel(); updateFab(); updProj(); renderFloorBar(); saveSoon(); }
+function restore(s){ const o=JSON.parse(s); Object.assign(P,{name:o.name,wallH:o.wallH,wallT:o.wallT,roof:o.roof,floors:o.floors,north:o.north||0,views:o.views||[],terrain:o.terrain||null}); P.floors.forEach(f=>{ f.groups=f.groups||[]; }); P.cur=Math.min(P.cur,P.floors.length-1); if(SEL&&!selObj()) SEL=null; refreshAfter(); renderPanel(); updateFab(); updProj(); renderFloorBar(); saveSoon(); }
 function undo(){ if(!HIST.u.length) return; HIST.r.push(HIST.cur); HIST.cur=HIST.u.pop(); restore(HIST.cur); updUndo(); }
 function redo(){ if(!HIST.r.length) return; HIST.u.push(HIST.cur); HIST.cur=HIST.r.pop(); restore(HIST.cur); updUndo(); }
 function refreshAfter(){ computeProblems(); computeStats(); need2=true; sync3d(); }
@@ -1265,6 +1315,16 @@ function contentBounds(){
 function fit2d(){ if(W2<2||!P){ needFit2=true; return; } needFit2=false; const b=contentBounds(), bw=Math.max(1,b.x1-b.x0), bh=Math.max(1,b.y1-b.y0); const s=clamp(Math.min((W2-70)/bw,(H2-90)/bh),SMIN,SMAX); V2.s=s; V2.ox=W2/2-(b.x0+b.x1)/2*s; V2.oy=H2/2-(b.y0+b.y1)/2*s; need2=true; }
 function zoom2(k,X,Y){ const s=clamp(V2.s*k,SMIN,SMAX); const wx=(X-V2.ox)/V2.s, wy=(Y-V2.oy)/V2.s; V2.s=s; V2.ox=X-wx*s; V2.oy=Y-wy*s; need2=true; }
 function pathPoly(p){ g2.beginPath(); p.forEach((q,i)=>{ const X=V2.ox+q[0]*V2.s, Y=V2.oy+q[1]*V2.s; i?g2.lineTo(X,Y):g2.moveTo(X,Y); }); g2.closePath(); }
+function holePath(p){ p.forEach((q,i)=>{ const X=V2.ox+q[0]*V2.s, Y=V2.oy+q[1]*V2.s; i?g2.lineTo(X,Y):g2.moveTo(X,Y); }); g2.closePath(); }
+/* เส้นรอบรูปทรง: รูปทรงปกติปิดเป็นวง ส่วนเส้น Follow Me ที่ไม่ปิดวาดเป็นเส้นเปิด */
+function shapeOutline(sh){ if(!sh.sweep||sh.sweep.closed){ pathPoly(sh.pts); return; } g2.beginPath(); sh.pts.forEach((q,i)=>{ const X=V2.ox+q[0]*V2.s, Y=V2.oy+q[1]*V2.s; i?g2.lineTo(X,Y):g2.moveTo(X,Y); }); }
+function pathMid(p){ let best=0, bl=-1; for(let i=1;i<p.length;i++){ const L=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]); if(L>bl){ bl=L; best=i; } } return [(p[best][0]+p[best-1][0])/2,(p[best][1]+p[best-1][1])/2]; }
+/* พื้นดิน: สีน้ำตาล = เนิน สีฟ้า = แอ่ง (ยิ่งเข้มยิ่งสูง/ลึก) */
+function drawTerrain2d(){
+  const t=P.terrain; if(!t||P.cur!==0) return; const c=g2, s=V2.s, n1=t.nx+1, cs=t.cell*s+0.6;
+  for(let j=0;j<t.ny;j++) for(let i=0;i<t.nx;i++){ const v=(t.h[j*n1+i]+t.h[j*n1+i+1]+t.h[(j+1)*n1+i]+t.h[(j+1)*n1+i+1])/4; if(Math.abs(v)<3) continue; const A=w2s(t.x0+i*t.cell,t.y0+j*t.cell); c.fillStyle=v>0?`rgba(150,105,60,${Math.min(0.5,0.08+v/260).toFixed(3)})`:`rgba(60,120,190,${Math.min(0.5,0.08-v/260).toFixed(3)})`; c.fillRect(A[0],A[1],cs,cs); }
+  const A=w2s(t.x0,t.y0); c.save(); c.setLineDash([3,5]); c.strokeStyle=TK.muted; c.lineWidth=1; c.strokeRect(A[0],A[1],t.nx*t.cell*s,t.ny*t.cell*s); c.restore();
+}
 function htext(t,x,y,font,color,align){ g2.font=font; g2.textAlign=align||'center'; g2.textBaseline='middle'; g2.lineJoin='round'; g2.lineWidth=3.5; g2.strokeStyle=TK.plan; g2.strokeText(t,x,y); g2.fillStyle=color; g2.fillText(t,x,y); }
 function pill(t,x,y,bg,fg){ g2.font='500 11px "IBM Plex Mono",monospace'; const w=g2.measureText(t).width+10; g2.fillStyle=bg; g2.beginPath(); if(g2.roundRect) g2.roundRect(x-w/2,y-9,w,18,5); else g2.rect(x-w/2,y-9,w,18); g2.fill(); g2.fillStyle=fg; g2.textAlign='center'; g2.textBaseline='middle'; g2.fillText(t,x,y+0.5); }
 const FONT_NUM='500 11px "IBM Plex Mono",monospace', FONT_LBL='500 11px "IBM Plex Sans Thai",sans-serif';
@@ -1293,7 +1353,7 @@ function draw2d(){
   const grid=(step,color)=>{ c.strokeStyle=color; c.lineWidth=1; c.beginPath(); for(let i=Math.floor(tl[0]/step);i*step<=br[0];i++){ const X=Math.round(V2.ox+i*step*s)+0.5; c.moveTo(X,0); c.lineTo(X,H2); } for(let i=Math.floor(tl[1]/step);i*step<=br[1];i++){ const Y=Math.round(V2.oy+i*step*s)+0.5; c.moveTo(0,Y); c.lineTo(W2,Y); } c.stroke(); };
   if(s*0.1>=7) grid(0.1,TK.grid); else if(s*0.5>=7) grid(0.5,TK.grid);
   grid(1,TK.gridMajor);
-  drawBg();
+  drawBg(); drawTerrain2d();
   /* ผนังชั้นล่าง (จาง ๆ ไว้เทียบตำแหน่ง) */
   if(P.cur>0){ c.save(); c.globalAlpha=0.16; c.fillStyle=TK.wall; wallsOf(P.floors[P.cur-1]).forEach(w=>w.pieces.forEach(pc=>{ if(pc.kind==='solid'){ pathPoly(pc.q); c.fill(); } })); c.restore(); }
   /* พื้น */
@@ -1331,9 +1391,11 @@ function draw2d(){
   });
   /* รูปทรงที่ปั้นเอง */
   P.shapes.slice().sort((a,b)=>a.elev-b.elev).forEach(sh=>{
-    pathPoly(sh.pts); c.save(); c.globalAlpha=sh.mat==='glass'?0.45:0.92; c.fillStyle=sh.color; c.fill(); c.restore();
+    if(sh.sweep){ c.save(); c.lineJoin='round'; c.lineCap='round'; shapeOutline(sh); c.strokeStyle=shade(sh.color,-0.45); c.lineWidth=Math.max(3,sh.sweep.w*s+2); c.stroke(); c.strokeStyle=sh.color; c.lineWidth=Math.max(1.5,sh.sweep.w*s); c.stroke();
+      if(sh.sweep.posts&&sh.elev>0.05){ c.fillStyle=shade(sh.color,-0.45); postsOf(sh).forEach(q=>{ const Q=w2s(q[0],q[1]); c.fillRect(Q[0]-3,Q[1]-3,6,6); }); } c.restore(); return; }
+    pathPoly(sh.pts); if(sh.hole) holePath(sh.hole); c.save(); c.globalAlpha=sh.mat==='glass'?0.45:0.92; c.fillStyle=sh.color; c.fill('evenodd'); c.restore();
     c.lineWidth=1.5; c.strokeStyle=shade(sh.color,-0.45); c.stroke();
-    if(sh.mat==='wood'||sh.mat==='concrete'){ c.save(); pathPoly(sh.pts); c.clip(); c.strokeStyle='rgba(0,0,0,0.12)'; c.lineWidth=1; const b=bboxPts(sh.pts), A=w2s(b.x0,b.y0), B=w2s(b.x1,b.y1); for(let y=A[1];y<B[1];y+=sh.mat==='wood'?8:14){ c.beginPath(); c.moveTo(A[0],y); c.lineTo(B[0],y); c.stroke(); } c.restore(); }
+    if(sh.mat==='wood'||sh.mat==='concrete'){ c.save(); pathPoly(sh.pts); if(sh.hole) holePath(sh.hole); c.clip('evenodd');c.strokeStyle='rgba(0,0,0,0.12)'; c.lineWidth=1; const b=bboxPts(sh.pts), A=w2s(b.x0,b.y0), B=w2s(b.x1,b.y1); for(let y=A[1];y<B[1];y+=sh.mat==='wood'?8:14){ c.beginPath(); c.moveTo(A[0],y); c.lineTo(B[0],y); c.stroke(); } c.restore(); }
   });
   const list=drawOrder();
   list.forEach(it=>{
@@ -1343,8 +1405,9 @@ function draw2d(){
     if(th) c.drawImage(th,-w/2,-d/2,w,d); else { c.fillStyle=it.color||'#b9b2a5'; c.fillRect(-w/2,-d/2,w,d); }
     c.globalAlpha=1; c.lineWidth=1; c.strokeStyle=TK.itemLine; if(wallM) c.setLineDash([4,3]); c.strokeRect(-w/2+0.5,-d/2+0.5,Math.max(1,w-1),Math.max(1,d-1)); c.setLineDash([]);
     if(PROB[it.id]){ c.fillStyle=TK.warnSoft; c.fillRect(-w/2,-d/2,w,d); c.strokeStyle=TK.warn; c.lineWidth=2; c.strokeRect(-w/2,-d/2,w,d); }
-    if(SEL&&SEL.kind==='item'&&SEL.id===it.id){ c.strokeStyle=TK.accent; c.lineWidth=2.2; c.strokeRect(-w/2-3,-d/2-3,w+6,d+6); }
+    if((SEL&&SEL.kind==='item'&&SEL.id===it.id)||inMulti('item',it.id)){ c.strokeStyle=TK.accent; c.lineWidth=2.2; c.strokeRect(-w/2-3,-d/2-3,w+6,d+6); }
     c.restore();
+    if((it.tx||it.tz)&&Math.min(w,d)>34){ const Q=w2s(it.x,it.y); pill('เอียง',Q[0],Q[1]+Math.min(w,d)/2-12,TK.ink,TK.surface); }
   });
   /* สายไฟ + สัญลักษณ์ไฟฟ้า */
   if(UI.wires) drawWires();
@@ -1381,11 +1444,18 @@ function draw2d(){
     for(let i=0;i<so.pts.length;i++){ const e=edgeOf(so,i); if(e.len*s<40) continue; const M=w2s((e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2); c.save(); c.translate(M[0],M[1]); c.rotate(Math.atan2(e.uy,e.ux)); c.fillStyle=TK.accent; c.beginPath(); if(c.roundRect) c.roundRect(-9,-4,18,8,4); else c.rect(-9,-4,18,8); c.fill(); c.restore(); }
   }
   /* เครื่องมือวาด */
-  P.shapes.forEach(sh=>{ const lp=labelPoint(sh.pts), Q=w2s(lp[0],lp[1]); htext('สูง '+cm(sh.h)+(sh.elev?' · ลอย '+cm(sh.elev):''),Q[0],Q[1],FONT_NUM,TK.ink); });
+  P.shapes.forEach(sh=>{ if(sh.sweep){ const lp=pathMid(sh.pts), Q=w2s(lp[0],lp[1]); htext(SWEEP_PROFS[sh.sweep.prof]+(sh.elev?' · ลอย '+cm(sh.elev):''),Q[0],Q[1]-Math.max(10,sh.sweep.w*s/2+8),FONT_NUM,TK.ink); return; } const lp=labelPoint(sh.pts), Q=w2s(lp[0],lp[1]); htext('สูง '+cm(sh.h)+(sh.elev?' · ลอย '+cm(sh.elev):''),Q[0],Q[1],FONT_NUM,TK.ink); });
   if(so&&SEL.kind==='shape'){
-    pathPoly(so.pts); c.strokeStyle=TK.accent; c.lineWidth=2.5; c.stroke();
-    so.pts.forEach((q,i)=>{ const Q=w2s(q[0],q[1]); c.beginPath(); c.arc(Q[0],Q[1],7,0,Math.PI*2); c.fillStyle=TK.surface; c.fill(); c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); const n=so.pts[(i+1)%so.pts.length], L=Math.hypot(n[0]-q[0],n[1]-q[1]); if(L*s>40){ const M=w2s((q[0]+n[0])/2,(q[1]+n[1])/2); pill(String(cm(L)),M[0],M[1],TK.accent,TK.accentInk); } });
+    shapeOutline(so); c.strokeStyle=TK.accent; c.lineWidth=2.5; c.stroke();
+    const open=so.sweep&&!so.sweep.closed;
+    so.pts.forEach((q,i)=>{ const Q=w2s(q[0],q[1]); c.beginPath(); c.arc(Q[0],Q[1],7,0,Math.PI*2); c.fillStyle=TK.surface; c.fill(); c.strokeStyle=TK.accent; c.lineWidth=2; c.stroke(); if(open&&i===so.pts.length-1) return; const n=so.pts[(i+1)%so.pts.length], L=Math.hypot(n[0]-q[0],n[1]-q[1]); if(L*s>40){ const M=w2s((q[0]+n[0])/2,(q[1]+n[1])/2); pill(String(cm(L)),M[0],M[1],TK.accent,TK.accentInk); } });
   }
+  if(so&&SEL.kind==='multi'){
+    P.shapes.forEach(sh=>{ if(inMulti('shape',sh.id)){ shapeOutline(sh); c.strokeStyle=TK.accent; c.lineWidth=2.5; c.stroke(); } });
+    const b=multiBox(so), A=w2s(b.x0,b.y0), B=w2s(b.x1,b.y1); c.save(); c.setLineDash([6,4]); c.strokeStyle=TK.accent; c.lineWidth=1.5; c.strokeRect(A[0]-6,A[1]-6,B[0]-A[0]+12,B[1]-A[1]+12); c.restore();
+    pill((SEL.grp?((getGroup(SEL.grp)||{}).name||'กลุ่ม')+' · ':'เลือกไว้ ')+(so.items.length+so.shapes.length)+' ชิ้น',(A[0]+B[0])/2,A[1]-20,TK.accent,TK.accentInk);
+  }
+  if(TOOL==='multi'&&P2.g&&P2.g.type==='box'&&P2.g.p1){ const a=w2s(P2.g.p0[0],P2.g.p0[1]), b=w2s(P2.g.p1[0],P2.g.p1[1]); c.save(); c.fillStyle=TK.accentSoft; c.fillRect(Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1])); c.setLineDash([5,4]); c.strokeStyle=TK.accent; c.lineWidth=1.5; c.strokeRect(Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1])); c.restore(); }
   if(isDraw()&&(D.pts.length||D.hover)){
     const pts=D.pts.slice(); if(D.hover) pts.push(D.hover);
     c.strokeStyle=TK.accent; c.lineWidth=2.2; c.beginPath(); pts.forEach((q,i)=>{ const Q=w2s(q[0],q[1]); i?c.lineTo(Q[0],Q[1]):c.moveTo(Q[0],Q[1]); }); c.stroke();
@@ -1445,10 +1515,12 @@ function drawDims(){
 }
 function drawLabels(){
   const c=g2, s=V2.s, sel=SEL&&SEL.kind==='label'?SEL.id:null;
-  P.labels.forEach(l=>{ const px=clamp(l.size*s,9,90), Q=w2s(l.x,l.y); c.save(); c.font='600 '+px+'px "Bai Jamjuree",sans-serif'; c.textAlign='center'; c.textBaseline='middle'; const tw=c.measureText(l.text).width;
-    LBOX[l.id]=[Q[0]-tw/2-4,Q[1]-px/2-3,Q[0]+tw/2+4,Q[1]+px/2+3];
-    c.lineJoin='round'; c.lineWidth=Math.max(3,px/5); c.strokeStyle=TK.plan; c.strokeText(l.text,Q[0],Q[1]); c.fillStyle=l.color; c.fillText(l.text,Q[0],Q[1]);
-    if(l.id===sel){ const b=LBOX[l.id]; c.strokeStyle=TK.accent; c.lineWidth=2; c.setLineDash([4,3]); c.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]); c.setLineDash([]); }
+  P.labels.forEach(l=>{ const px=clamp(l.size*s,9,90), Q=w2s(l.x,l.y), r=(l.rot||0)*Math.PI/180; c.save(); c.translate(Q[0],Q[1]); c.rotate(r); c.font='600 '+px+'px "Bai Jamjuree",sans-serif'; c.textAlign='center'; c.textBaseline='middle'; const tw=c.measureText(l.text).width;
+    const hw=tw/2+4, hh=px/2+3, ca=Math.abs(Math.cos(r)), sa=Math.abs(Math.sin(r)), ex=hw*ca+hh*sa, ey=hw*sa+hh*ca; LBOX[l.id]=[Q[0]-ex,Q[1]-ey,Q[0]+ex,Q[1]+ey];
+    c.lineJoin='round'; c.lineWidth=Math.max(3,px/5); c.strokeStyle=TK.plan; c.strokeText(l.text,0,0);
+    if(l.d3){ c.fillStyle=shade(l.color,-0.55); c.globalAlpha=0.45; c.fillText(l.text,2,2); c.globalAlpha=1; }
+    c.fillStyle=l.color; c.fillText(l.text,0,0);
+    if(l.id===sel){ c.strokeStyle=TK.accent; c.lineWidth=2; c.setLineDash([4,3]); c.strokeRect(-hw,-hh,hw*2,hh*2); c.setLineDash([]); }
     c.restore(); });
 }
 function addDim(a,b){ if(Math.hypot(b[0]-a[0],b[1]-a[1])<0.01) return; const d={id:uid('d'),a:a.slice(),b:b.slice()}; P.dims.push(d); MS.a=null; MS.hover=null; commit(); const L=Math.hypot(b[0]-a[0],b[1]-a[1]); toast('ระยะ '+(L>=1?f2(L)+' ม.':cm(L)+' ซม.')+' · วัดต่อได้เลย หรือแตะเส้นเพื่อแก้/ลบ'); }
@@ -1484,6 +1556,66 @@ function scaleBgByDim(d,real){
   BG.data.x=rd(a[0]+(BG.data.x-a[0])*k); BG.data.y=rd(a[1]+(BG.data.y-a[1])*k); BG.data.w=rd(BG.data.w*k); BG.data.lock=true; saveBg();
   d.b=[rd(a[0]+(d.b[0]-a[0])*k),rd(a[1]+(d.b[1]-a[1])*k)]; commit(); toast('ตั้งสเกลรูปแล้ว และล็อกรูปไว้ · เริ่มวาดห้องทับรูปได้เลย');
 }
+/* ---------------- ลอกผนังจากรูปแปลนอัตโนมัติ (ทำในเครื่องนี้ ไม่ส่งรูปไปไหน) ----------------
+   1) ย่อรูป แล้วแยกเส้นเข้ม (ผนัง) ด้วยค่าแบ่งอัตโนมัติแบบ Otsu
+   2) ลบเส้นบาง (ตัวหนังสือ เส้นเฟอร์นิเจอร์) ด้วยการกัดแล้วพองกลับ
+   3) พองผนังอีก ~42 ซม. ให้ช่องประตูปิด แล้วหาที่ว่างที่มีผนังล้อมรอบ = ห้อง
+   4) ตามขอบแต่ละห้อง ทำเส้นให้เรียบ ขยายกลับเท่าที่พองไว้ แล้วดัดให้ตรงแนวแกน */
+function morph(src,w,h,r,dil){
+  const tmp=new Uint8Array(w*h), out=new Uint8Array(w*h), acc=new Int32Array(Math.max(w,h)+1), full=2*r+1;
+  for(let y=0;y<h;y++){ for(let x=0;x<w;x++) acc[x+1]=acc[x]+src[y*w+x]; for(let x=0;x<w;x++){ const s=acc[Math.min(w,x+r+1)]-acc[Math.max(0,x-r)]; tmp[y*w+x]=dil?(s>0?1:0):(s===full?1:0); } }
+  for(let x=0;x<w;x++){ for(let y=0;y<h;y++) acc[y+1]=acc[y]+tmp[y*w+x]; for(let y=0;y<h;y++){ const s=acc[Math.min(h,y+r+1)]-acc[Math.max(0,y-r)]; out[y*w+x]=dil?(s>0?1:0):(s===full?1:0); } }
+  return out;
+}
+function otsu(gray){ const hist=new Float64Array(256), N=gray.length; for(let i=0;i<N;i++) hist[gray[i]]++; let sum=0; for(let i=0;i<256;i++) sum+=i*hist[i]; let sB=0, wB=0, best=-1, thr=128; for(let i=0;i<256;i++){ wB+=hist[i]; if(!wB) continue; const wF=N-wB; if(!wF) break; sB+=i*hist[i]; const mB=sB/wB, mF=(sum-sB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>best){ best=v; thr=i; } } return thr; }
+/* เดินตามขอบพิกเซลของบริเวณ id (ให้บริเวณอยู่ทางขวามือเสมอ) ได้จุดมุมของรูปหลายเหลี่ยม */
+function traceOutline(lab,w,h,id){
+  let s=-1; for(let i=0;i<w*h;i++) if(lab[i]===id){ s=i; break; } if(s<0) return [];
+  const at=(x,y)=>x>=0&&y>=0&&x<w&&y<h&&lab[y*w+x]===id, x0=s%w, y0=(s/w)|0, out=[[x0,y0]]; let cx=x0, cy=y0, dx=1, dy=0, guard=0;
+  do{ cx+=dx; cy+=dy; const rx=-dy, ry=dx, B=at(Math.floor(cx+0.5*dx+0.5*rx),Math.floor(cy+0.5*dy+0.5*ry)), A=at(Math.floor(cx+0.5*dx-0.5*rx),Math.floor(cy+0.5*dy-0.5*ry));
+    let nx=dx, ny=dy; if(!B){ nx=rx; ny=ry; } else if(A){ nx=dy; ny=-dx; } if(nx!==dx||ny!==dy){ out.push([cx,cy]); dx=nx; dy=ny; }
+  }while(!(cx===x0&&cy===y0&&dx===1&&dy===0)&&++guard<w*h*4);
+  if(out.length>1&&out[out.length-1][0]===x0&&out[out.length-1][1]===y0) out.pop();
+  return out;
+}
+function dpSimplify(pts,tol){
+  const n=pts.length; if(n<4) return pts; let far=0, fd=-1; for(let i=1;i<n;i++){ const d=Math.hypot(pts[i][0]-pts[0][0],pts[i][1]-pts[0][1]); if(d>fd){ fd=d; far=i; } }
+  const out=[], rec=(a,b)=>{ let md=-1, mi=-1; const B=pts[b%n]; for(let i=a+1;i<b;i++){ const d=segProj(pts[i][0],pts[i][1],pts[a][0],pts[a][1],B[0],B[1]).d; if(d>md){ md=d; mi=i; } } if(md>tol){ rec(a,mi); rec(mi,b); } else out.push(pts[a]); };
+  rec(0,far); rec(far,n); return out;
+}
+/* ดัดเส้นที่เกือบตั้ง/เกือบนอนให้ตรงแนว แล้วลบจุดซ้ำ จุดย้อนกลับ และจุดที่อยู่บนเส้นตรงเดียวกัน */
+function orthoPoly(p,deg){
+  const t=Math.tan(deg*Math.PI/180);
+  for(let k=0;k<2;k++) for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length], dx=b[0]-a[0], dy=b[1]-a[1]; if(Math.abs(dy)<=Math.abs(dx)*t){ const m=(a[1]+b[1])/2; a[1]=m; b[1]=m; } else if(Math.abs(dx)<=Math.abs(dy)*t){ const m=(a[0]+b[0])/2; a[0]=m; b[0]=m; } }
+  const q=p.map(v=>[snapv(v[0],0.01),snapv(v[1],0.01)].map(rd)); let ch=true;
+  while(ch&&q.length>3){ ch=false; for(let i=0;i<q.length;i++){ const a=q[(i-1+q.length)%q.length], b=q[i], c=q[(i+1)%q.length], cr=(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]); if(Math.hypot(b[0]-a[0],b[1]-a[1])<0.03||Math.abs(cr)<2e-4){ q.splice(i,1); ch=true; break; } } }
+  return q;
+}
+function traceWalls(){
+  if(!BG.img||!BG.data){ toast('ใส่รูปแปลนก่อน แล้วตั้งสเกลให้ตรง'); return; }
+  const d=BG.data, Wm=d.w, Hm=bgH(), ppm=clamp(Math.min(700/Wm,700/Hm),8,70), w=Math.max(16,Math.round(Wm*ppm)), h=Math.max(16,Math.round(Hm*ppm)), sx=Wm/w, sy=Hm/h;
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const x=cv.getContext('2d'); x.fillStyle='#ffffff'; x.fillRect(0,0,w,h); x.drawImage(BG.img,0,0,w,h);
+  let px; try{ px=x.getImageData(0,0,w,h).data; }catch(e){ toast('อ่านรูปนี้ไม่ได้'); return; }
+  const N=w*h, gray=new Uint8Array(N); for(let i=0;i<N;i++) gray[i]=(px[i*4]*77+px[i*4+1]*150+px[i*4+2]*29)>>8;
+  const thr=Math.min(otsu(gray),200), dark=new Uint8Array(N); let nd=0; for(let i=0;i<N;i++) if(gray[i]<thr){ dark[i]=1; nd++; }
+  if(nd<N*0.005){ toast('ไม่เจอเส้นผนังในรูป ลองรูปที่ผนังเป็นเส้นดำหนา'); return; }
+  const ro=Math.max(1,Math.round(0.045/sx)); let wall=morph(morph(dark,w,h,ro,false),w,h,ro,true), nw=0; for(let i=0;i<N;i++) nw+=wall[i]; if(nw<N*0.01) wall=dark;
+  const rc=Math.max(2,Math.round(0.42/sx)), seal=morph(wall,w,h,rc,true), lab=new Int32Array(N), st=new Int32Array(N), regs=[]; let id=0;
+  for(let i=0;i<N;i++){ if(seal[i]||lab[i]) continue; id++; let top=0, n=0, edge=false; st[top++]=i; lab[i]=id;
+    while(top){ const k=st[--top], kx=k%w, ky=(k/w)|0; n++; if(kx===0||ky===0||kx===w-1||ky===h-1) edge=true;
+      if(kx>0&&!seal[k-1]&&!lab[k-1]){ lab[k-1]=id; st[top++]=k-1; } if(kx<w-1&&!seal[k+1]&&!lab[k+1]){ lab[k+1]=id; st[top++]=k+1; }
+      if(ky>0&&!seal[k-w]&&!lab[k-w]){ lab[k-w]=id; st[top++]=k-w; } if(ky<h-1&&!seal[k+w]&&!lab[k+w]){ lab[k+w]=id; st[top++]=k+w; } }
+    if(!edge&&n*sx*sy>=0.25) regs.push({id,n}); }
+  const made=[];
+  regs.sort((a,b)=>b.n-a.n).slice(0,40).forEach(rg=>{
+    let poly=traceOutline(lab,w,h,rg.id).map(q=>[d.x+q[0]*sx,d.y+q[1]*sy]); poly=dpSimplify(poly,1.6*sx); if(poly.length<3) return;
+    const tmp={pts:poly}; poly=poly.map((q,i)=>outerPt(tmp,i,rc*sx)); poly=orthoPoly(poly,12);
+    if(poly.length<3||Math.abs(area2(poly))/2<0.8) return; if(area2(poly)<0) poly.reverse(); made.push(poly); });
+  if(!made.length){ toast('หาห้องในรูปไม่เจอ ลองตั้งสเกลรูปก่อน หรือใช้รูปที่ผนังชัดขึ้น'); return; }
+  made.sort((a,b)=>{ const A=bboxPts(a), B=bboxPts(b); return (A.y0-B.y0)||(A.x0-B.x0); }).forEach(pts=>P.rooms.push(newRoom(pts)));
+  BG.data.lock=true; saveBg(); if(UI.view==='3d') setView(isWide()?'split':'2d'); select(null,true); commit();
+  toast('ลอกได้ '+made.length+' ห้อง · แตะห้องเพื่อแก้มุมได้ · กดย้อนกลับถ้าไม่ชอบ');
+}
 
 /* ---------------- จับนิ้ว/เมาส์บนแปลน ---------------- */
 const P2={ptrs:{},g:null}; let HOV=null;
@@ -1492,6 +1624,7 @@ function xy(e,el){ const r=el.getBoundingClientRect(); return [e.clientX-r.left,
 function blurField(){ const a=document.activeElement; if(a&&a!==document.body&&/INPUT/.test(a.tagName)) a.blur(); }
 function allVerts(skipRoom,skipIdx){ const v=[]; D.pts.forEach(q=>v.push(q)); P.rooms.concat(P.shapes).forEach(r=>r.pts.forEach((q,i)=>{ if(!(r===skipRoom&&i===skipIdx)) v.push(q); })); return v; }
 const isDraw=()=>TOOL==='room'||TOOL==='shape'||TOOL==='wire';
+const pathMode=()=>TOOL==='shape'&&UI.shapeMode==='path';
 /* จุดที่สายไฟดูดเข้าหา: มุมห้อง กลางของไฟฟ้า และจุดของสายอื่น (ต่อแยกได้) */
 function wireVerts(sw,si){ const v=allVerts(); P.items.forEach(it=>{ if(isElec(it)||isLight(it)) v.push([it.x,it.y]); }); P.wires.forEach(w=>w.pts.forEach((q,i)=>{ if(!(w===sw&&i===si)) v.push(q); })); return v; }
 const drawVerts=()=>TOOL==='wire'?wireVerts():allVerts();
@@ -1505,6 +1638,31 @@ function addShape(pts){
   const s={id:uid('s'),name:'รูปทรง '+(P.shapes.length+1),pts,h:1.0,elev:0,color:SHAPE_COLORS[0],mat:'plain'};
   P.shapes.push(s); D.pts=[]; D.hover=null; setTool('select'); select({kind:'shape',id:s.id}); commit();
   toast('ได้รูปทรงสูง 100 ซม. แล้ว · ใน 3D ลากด้านบนขึ้นลงเพื่อดัน/ดึงความสูง');
+}
+/* Follow Me (แบบ SketchUp): วาดเส้นทางแล้วให้รูปหน้าตัดวิ่งตาม ทำราว ท่อ ขอบคันหิน บัว */
+const SWEEP_PRESETS={rail:['ราวกันตก',{prof:'round',w:0.05,posts:true},0.05,0.9,'#7a5236','wood'],pipe:['ท่อ',{prof:'round',w:0.1,posts:false},0.1,0,'#9aa1a8','plain'],curb:['ขอบคันหิน',{prof:'curb',w:0.15,posts:false},0.2,0,'#d9d4ca','concrete'],skirt:['บัวผนัง',{prof:'cove',w:0.04,posts:false},0.1,0,'#f3f1ec','plain']};
+function addSweep(pts,closed){
+  const s={id:uid('s'),name:'Follow Me '+(P.shapes.length+1),pts:pts.map(q=>[rd(q[0]),rd(q[1])]),h:0.08,elev:0,color:'#9aa1a8',mat:'plain',sweep:{prof:'round',w:0.08,closed:!!closed&&pts.length>2,posts:false}};
+  P.shapes.push(s); D.pts=[]; D.hover=null; D.closed=false; setTool('select'); select({kind:'shape',id:s.id}); commit(); setSheet(true);
+  toast('ได้เส้น Follow Me แล้ว · เลือกรูปหน้าตัด ขนาด และความสูงที่แผง "แก้ไข"');
+}
+function postsOf(s){ const p=s.pts, n=p.length, cl=s.sweep.closed&&n>2, segs=cl?n:n-1, out=[]; for(let i=0;i<segs;i++){ const a=p[i], b=p[(i+1)%n], L=Math.hypot(b[0]-a[0],b[1]-a[1]), k=Math.max(1,Math.round(L/1.2)); for(let j=0;j<k;j++) out.push([a[0]+(b[0]-a[0])*j/k,a[1]+(b[1]-a[1])*j/k]); } if(!cl) out.push(p[n-1]); return out; }
+/* ย้าย/หมุน/ย่อรูปทรงพร้อมรูเจาะกลาง (ถ้ามี) */
+function xfShape(s,src,f){ s.pts=src.pts.map(f); if(src.hole) s.hole=src.hole.map(f); }
+/* Offset: เลื่อนทุกขอบออกนอก (d>0) หรือเข้าใน (d<0) เท่ากัน ใช้สูตรมุมเดียวกับผนัง */
+function offsetPts(pts,d){ const tmp={pts}; const out=pts.map((q,i)=>{ const p=outerPt(tmp,i,d); return [rd(p[0]),rd(p[1])]; }); const a0=area2(pts), a1=area2(out); if(a0*a1<=0||Math.abs(a1)/2<0.002) return null; if(d<0&&Math.abs(a1)>=Math.abs(a0)) return null; return out; }
+/* ผนังโค้ง: แทนผนัง i ด้วยส่วนโค้งหลายช่วง (sag = ระยะโป่งกลางผนัง + ออกนอกห้อง − เข้าในห้อง) */
+function curveWall(room,i,sag){
+  const n=room.pts.length, a=room.pts[i], b=room.pts[(i+1)%n], e=edgeOf(room,i), L=e.len; sag=clamp(sag,-L/2*0.98,L/2*0.98); if(Math.abs(sag)<0.01||L<0.3) return false;
+  const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2, ax=mx+e.nx*sag, ay=my+e.ny*sag, R=(L*L/4+sag*sag)/(2*Math.abs(sag)), sg=sag>0?1:-1, cx=ax-e.nx*sg*R, cy=ay-e.ny*sg*R;
+  const ang=q=>Math.atan2(q[1]-cy,q[0]-cx), a0=ang(a); let dA=ang([ax,ay])-a0; while(dA>Math.PI) dA-=2*Math.PI; while(dA<-Math.PI) dA+=2*Math.PI;
+  /* มีประตู/หน้าต่างบนผนังนี้: แบ่งช่วงให้กว้างพอใส่ได้ และให้มีช่วงตรงกลางพอดี */
+  const arc=2*Math.abs(dA)*R, wmax=P.openings.filter(o=>o.room===room.id&&o.edge===i).reduce((m,o)=>Math.max(m,o.w),0), list=openingCenters(room), add=[];
+  let N=clamp(Math.ceil(arc/0.35),6,24); if(wmax){ N=Math.min(N,Math.max(3,Math.floor(arc/(wmax+0.08)))); if(N%2===0) N=Math.max(3,N-1); }
+  for(let k=1;k<N;k++){ const t=a0+2*dA*k/N; add.push([rd(cx+Math.cos(t)*R),rd(cy+Math.sin(t)*R)]); }
+  room.pts.splice(i+1,0,...add);
+  if(room.walls){ const nw={}; Object.keys(room.walls).forEach(k=>{ const j=+k; if(j<i) nw[j]=room.walls[k]; else if(j>i) nw[j+N-1]=room.walls[k]; else for(let m=0;m<N;m++) nw[i+m]=deep(room.walls[k]); }); room.walls=nw; }
+  reattach(room,list); return true;
 }
 function snapPoint(wx,wy,last,verts){
   const tol=10/V2.s, guides=[];
@@ -1531,7 +1689,17 @@ function snapItem(it){
 }
 function hitOpening(wx,wy,tol){ for(const o of P.openings){ const w=openingWorld(o); if(!w) continue; const al=(wx-w.cx)*w.ux+(wy-w.cy)*w.uy, off=(wx-w.cx)*w.nx+(wy-w.cy)*w.ny; if(Math.abs(al)<=o.w/2+tol&&off>=-tol-0.04&&off<=P.wallT+tol+0.04) return o; } return null; }
 function roomAtWall(wx,wy){ for(let k=P.rooms.length-1;k>=0;k--){ const r=P.rooms[k]; for(let i=0;i<r.pts.length;i++){ const e=edgeOf(r,i); const off=(wx-e.a[0])*e.nx+(wy-e.a[1])*e.ny, al=(wx-e.a[0])*e.ux+(wy-e.a[1])*e.uy; if(off>=-0.01&&off<=P.wallT+0.01&&al>=-P.wallT&&al<=e.len+P.wallT) return r; } } return null; }
+function shapeHit(sh,w){
+  if(sh.sweep){ const p=sh.pts, n=p.length, tol=Math.max(sh.sweep.w/2,8/V2.s); for(let i=1;i<n+(sh.sweep.closed?1:0);i++){ const a=p[i-1], b=p[i%n]; if(segProj(w[0],w[1],a[0],a[1],b[0],b[1]).d<tol) return true; } return false; }
+  return pip(w[0],w[1],sh.pts)&&!(sh.hole&&pip(w[0],w[1],sh.hole));
+}
+function pickObj(w){
+  const list=drawOrder(); for(let i=list.length-1;i>=0;i--){ const it=list[i]; const pad=Math.max(0,(24/V2.s-Math.min(it.w,it.d))/2); if(inItem(it,w[0],w[1],pad)) return {kind:'item',id:it.id}; }
+  for(let i=P.shapes.length-1;i>=0;i--) if(shapeHit(P.shapes[i],w)) return {kind:'shape',id:P.shapes[i].id};
+  return null;
+}
 function pick2(X,Y,w){
+  if(TOOL==='multi') return pickObj(w);
   if(TOOL!=='select') return null;
   const so=selObj();
   if(so&&SEL.kind==='item'){ const h=rotHandle(so); if(Math.hypot(X-h[0],Y-h[1])<15) return {kind:'rot',id:so.id}; }
@@ -1547,8 +1715,7 @@ function pick2(X,Y,w){
   }
   const o=hitOpening(w[0],w[1],8/V2.s); if(o) return {kind:'open',id:o.id};
   if(UI.wires&&!P.items.some(it=>isElec(it)&&inItem(it,w[0],w[1],Math.max(0,(20/V2.s-Math.min(it.w,it.d))/2)))) for(let i=P.wires.length-1;i>=0;i--){ const wr=P.wires[i]; for(let j=1;j<wr.pts.length;j++){ const a=wr.pts[j-1], b=wr.pts[j]; if(segProj(w[0],w[1],a[0],a[1],b[0],b[1]).d*V2.s<7) return {kind:'wire',id:wr.id}; } }
-  const list=drawOrder(); for(let i=list.length-1;i>=0;i--){ const it=list[i]; const pad=Math.max(0,(24/V2.s-Math.min(it.w,it.d))/2); if(inItem(it,w[0],w[1],pad)) return {kind:'item',id:it.id}; }
-  for(let i=P.shapes.length-1;i>=0;i--) if(pip(w[0],w[1],P.shapes[i].pts)) return {kind:'shape',id:P.shapes[i].id};
+  const ob=pickObj(w); if(ob) return ob;
   const r=roomAtWall(w[0],w[1])||roomAt(w[0],w[1]); if(r) return {kind:'room',id:r.id};
   if(BG.img&&BG.data&&!BG.data.hide&&!BG.data.lock&&w[0]>=BG.data.x&&w[0]<=BG.data.x+BG.data.w&&w[1]>=BG.data.y&&w[1]<=BG.data.y+bgH()) return {kind:'bg',id:'bg'};
   return null;
@@ -1560,7 +1727,7 @@ cv2.addEventListener('pointerdown',e=>{
   if(ids.length===2){ endDrag2(); const a=P2.ptrs[ids[0]], b=P2.ptrs[ids[1]]; P2.g={type:'pinch',d0:Math.hypot(a[0]-b[0],a[1]-b[1])||1,m0:[(a[0]+b[0])/2,(a[1]+b[1])/2],s0:V2.s,ox0:V2.ox,oy0:V2.oy}; return; }
   if(ids.length>2) return;
   const w=s2w(p[0],p[1]);
-  P2.g={type:'pending',x0:p[0],y0:p[1],lx:p[0],ly:p[1],w0:w,btn:e.button,hit:e.button===0?pick2(p[0],p[1],w):null};
+  P2.g={type:'pending',x0:p[0],y0:p[1],lx:p[0],ly:p[1],w0:w,btn:e.button,sh:e.shiftKey,hit:e.button===0?pick2(p[0],p[1],w):null};
   if(isDraw()){ D.hover=null; }
   e.preventDefault();
 });
@@ -1583,9 +1750,10 @@ function startDrag2(g){
   const h=g.hit;
   if(g.btn===1||g.btn===2){ g.type='pan'; return; }
   if(TOOL==='shape'&&UI.shapeMode==='circle'&&g.btn===0){ g.type='circle'; const sc=snapPoint(g.w0[0],g.w0[1],null,allVerts()); g.p0=[sc.x,sc.y]; g.r=0; return; }
-  if((TOOL==='rect'||(TOOL==='shape'&&!D.pts.length))&&g.btn===0){ g.type='rect'; const s=snapPoint(g.w0[0],g.w0[1],null,allVerts()); g.p0=[s.x,s.y]; return; }
+  if(TOOL==='multi'&&g.btn===0){ if(h&&!inMulti(h.kind,h.id)) toggleMulti(h.kind,h.id); if(h&&inMulti(h.kind,h.id)){ startMulti(g); return; } g.type='box'; g.p0=g.w0; return; }
+  if((TOOL==='rect'||(TOOL==='shape'&&!D.pts.length&&!pathMode()))&&g.btn===0){ g.type='rect'; const s=snapPoint(g.w0[0],g.w0[1],null,allVerts()); g.p0=[s.x,s.y]; return; }
   if(TOOL!=='select'||!h){ g.type='pan'; return; }
-  if(h.kind==='rot'){ g.type='rot'; g.id=h.id; return; }
+  if(h.kind==='rot'){ const it=getItem(h.id); g.type='rot'; g.id=h.id; g.rot0=it.rot; g.riders=ridersOf(it).map(o=>({id:o.id,x:o.x,y:o.y,rot:o.rot})); return; }
   if(h.kind==='scorner'){ g.type='scorner'; g.id=h.id; g.i=h.i; return; }
   if(h.kind==='wcorner'){ g.type='wcorner'; g.id=h.id; g.i=h.i; SEL.i=h.i; return; }
   if(h.kind==='dcorner'){ g.type='dcorner'; g.id=h.id; g.end=h.end; return; }
@@ -1594,11 +1762,12 @@ function startDrag2(g){
   if(h.kind==='bg'){ g.type='bgmove'; g.ix=BG.data.x; g.iy=BG.data.y; if(!(SEL&&SEL.kind==='bg')) select({kind:'bg',id:'bg'}); return; }
   if(h.kind==='bgsize'){ g.type='bgsize'; return; }
   if(h.kind==='wire'){ g.type='wmove'; g.id=h.id; g.pts0=deep(getWire(h.id).pts); if(!(SEL&&SEL.id===h.id)) select({kind:'wire',id:h.id}); return; }
-  if(h.kind==='shape'){ g.type='smove'; g.id=h.id; g.pts0=deep(getShape(h.id).pts); if(!(SEL&&SEL.id===h.id)) select({kind:'shape',id:h.id}); return; }
+  if(h.kind==='item'||h.kind==='shape'){ const ob=h.kind==='item'?getItem(h.id):getShape(h.id); if(ob&&ob.grp&&!inMulti(h.kind,h.id)&&!(SEL&&SEL.id===h.id)) select(groupSel(ob.grp)); if(inMulti(h.kind,h.id)){ startMulti(g); return; } }
+  if(h.kind==='shape'){ const sh=getShape(h.id); g.type='smove'; g.id=h.id; g.src=deep({pts:sh.pts,hole:sh.hole}); if(!(SEL&&SEL.id===h.id)) select({kind:'shape',id:h.id}); return; }
   if(h.kind==='corner'){ g.type='corner'; g.room=h.room; g.i=h.i; SEL.corner=h.i; SEL.wall=null; return; }
   if(h.kind==='edge'){ const r=getRoom(h.room), e=edgeOf(r,h.i); g.type='edge'; g.room=h.room; g.i=h.i; g.nx=e.nx; g.ny=e.ny; g.a0=r.pts[h.i].slice(); g.b0=r.pts[(h.i+1)%r.pts.length].slice(); return; }
   if(h.kind==='open'){ g.type='open'; g.id=h.id; if(!(SEL&&SEL.id===h.id)) select({kind:'open',id:h.id}); return; }
-  if(h.kind==='item'){ const it=getItem(h.id); g.type='item'; g.id=h.id; g.ix=it.x; g.iy=it.y; g.wv=[]; if(isElec(it)||isLight(it)) P.wires.forEach(wr=>wr.pts.forEach((q,i)=>{ if(Math.hypot(q[0]-it.x,q[1]-it.y)<0.02) g.wv.push([wr,i]); })); if(!(SEL&&SEL.id===h.id)) select({kind:'item',id:h.id}); return; }
+  if(h.kind==='item'){ const it=getItem(h.id); g.type='item'; g.id=h.id; g.ix=it.x; g.iy=it.y; g.ie=it.elev||0; g.riders=ridersOf(it).map(o=>({id:o.id,x:o.x,y:o.y,elev:o.elev||0})); g.wv=[]; if(isElec(it)||isLight(it)) P.wires.forEach(wr=>wr.pts.forEach((q,i)=>{ if(Math.hypot(q[0]-it.x,q[1]-it.y)<0.02) g.wv.push([wr,i]); })); if(!(SEL&&SEL.id===h.id)) select({kind:'item',id:h.id}); return; }
   if(h.kind==='room'&&SEL&&SEL.kind==='room'&&SEL.id===h.id){ const r=getRoom(h.id); g.type='room'; g.id=h.id; g.pts0=deep(r.pts); g.items=P.items.filter(it=>pip(it.x,it.y,r.pts)).map(it=>({id:it.id,x:it.x,y:it.y})); return; }
   g.type='pan';
 }
@@ -1606,8 +1775,10 @@ function moveDrag2(g,p,e){
   const w=s2w(p[0],p[1]);
   switch(g.type){
     case 'pan': V2.ox+=p[0]-g.lx; V2.oy+=p[1]-g.ly; need2=true; break;
-    case 'item': { const it=getItem(g.id); if(!it) break; it.x=g.ix+(w[0]-g.w0[0]); it.y=g.iy+(w[1]-g.w0[1]); if(!e.altKey) snapItem(it); (g.wv||[]).forEach(([wr,i])=>{ wr.pts[i]=[it.x,it.y]; }); g.moved=true; live(); break; }
-    case 'rot': { const it=getItem(g.id); if(!it) break; const c=w2s(it.x,it.y); let a=Math.atan2(p[1]-c[1],p[0]-c[0])*180/Math.PI+90; a=e.shiftKey?Math.round(a):Math.round(a/15)*15; it.rot=((a%360)+360)%360; g.moved=true; live(); break; }
+    case 'item': { const it=getItem(g.id); if(!it) break; it.x=g.ix+(w[0]-g.w0[0]); it.y=g.iy+(w[1]-g.w0[1]); if(!e.altKey) snapItem(it); (g.wv||[]).forEach(([wr,i])=>{ wr.pts[i]=[it.x,it.y]; }); moveRiders(g,it); g.moved=true; live(); break; }
+    case 'rot': { const it=getItem(g.id); if(!it) break; const c=w2s(it.x,it.y); let a=Math.atan2(p[1]-c[1],p[0]-c[0])*180/Math.PI+90; a=e.shiftKey?Math.round(a):Math.round(a/15)*15; it.rot=((a%360)+360)%360; rotRiders(g.riders,it,it.rot-g.rot0); g.moved=true; live(); break; }
+    case 'multi': moveMulti(g,snapv(w[0]-g.w0[0],0.01),snapv(w[1]-g.w0[1],0.01)); break;
+    case 'box': g.p1=w; need2=true; break;
     case 'corner': { const r=getRoom(g.room); if(!r) break; const prev=r.pts[(g.i-1+r.pts.length)%r.pts.length]; const sp=snapPoint(w[0],w[1],null,allVerts(r,g.i)); if(Math.abs(sp.x-prev[0])<10/V2.s) sp.x=prev[0]; if(Math.abs(sp.y-prev[1])<10/V2.s) sp.y=prev[1]; r.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
     case 'edge': { const r=getRoom(g.room); if(!r) break; const dd=snapv((w[0]-g.w0[0])*g.nx+(w[1]-g.w0[1])*g.ny,0.05); const j=(g.i+1)%r.pts.length; r.pts[g.i]=[rd(g.a0[0]+g.nx*dd),rd(g.a0[1]+g.ny*dd)]; r.pts[j]=[rd(g.b0[0]+g.nx*dd),rd(g.b0[1]+g.ny*dd)]; g.moved=true; live(); break; }
     case 'room': { const r=getRoom(g.id); if(!r) break; const dx=snapv(w[0]-g.w0[0],0.05), dy=snapv(w[1]-g.w0[1],0.05); r.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.items.forEach(o=>{ const it=getItem(o.id); if(it){ it.x=rd(o.x+dx); it.y=rd(o.y+dy); } }); g.moved=true; live(); break; }
@@ -1615,7 +1786,7 @@ function moveDrag2(g,p,e){
     case 'circle': { g.r=rd(Math.max(0,snapv(Math.hypot(w[0]-g.p0[0],w[1]-g.p0[1]),0.01))); need2=true; break; }
     case 'rect': { const s=snapPoint(w[0],w[1],null,allVerts()); g.p1=[s.x,s.y]; need2=true; break; }
     case 'scorner': { const sh=getShape(g.id); if(!sh) break; const sp=snapPoint(w[0],w[1],null,allVerts(sh,g.i)); sh.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
-    case 'smove': { const sh=getShape(g.id); if(!sh) break; const dx=snapv(w[0]-g.w0[0],0.01), dy=snapv(w[1]-g.w0[1],0.01); sh.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.moved=true; live(); break; }
+    case 'smove': { const sh=getShape(g.id); if(!sh) break; const dx=snapv(w[0]-g.w0[0],0.01), dy=snapv(w[1]-g.w0[1],0.01); xfShape(sh,g.src,q=>[rd(q[0]+dx),rd(q[1]+dy)]); g.moved=true; live(); break; }
     case 'wcorner': { const wr=getWire(g.id); if(!wr) break; const sp=snapPoint(w[0],w[1],null,wireVerts(wr,g.i)); wr.pts[g.i]=[sp.x,sp.y]; g.moved=true; live(); break; }
     case 'dcorner': { const d=getDim(g.id); if(!d) break; const cur=d[g.end], o=g.end==='a'?d.b:d.a, sp=snapPoint(w[0],w[1],o,measureVerts().filter(q=>q!==cur)); d[g.end]=[sp.x,sp.y]; g.moved=true; live(); break; }
     case 'dmove': { const d=getDim(g.id); if(!d) break; const dx=snapv(w[0]-g.w0[0],0.01), dy=snapv(w[1]-g.w0[1],0.01); d.a=[rd(g.a0[0]+dx),rd(g.a0[1]+dy)]; d.b=[rd(g.b0[0]+dx),rd(g.b0[1]+dy)]; g.moved=true; live(); break; }
@@ -1629,6 +1800,9 @@ function moveDrag2(g,p,e){
 function endDrag2(){
   const g=P2.g; P2.g=null; if(!g) return;
   if(g.type==='circle'){ if(g.r>=0.03) addShape(circlePts(g.p0,g.r)); else need2=true; return; }
+  if(g.type==='box'){ if(g.p1){ const x0=Math.min(g.p0[0],g.p1[0]), x1=Math.max(g.p0[0],g.p1[0]), y0=Math.min(g.p0[1],g.p1[1]), y1=Math.max(g.p0[1],g.p1[1]), inb=(x,y)=>x>=x0&&x<=x1&&y>=y0&&y<=y1;
+      addMulti(P.items.filter(it=>inb(it.x,it.y)).map(it=>it.id),P.shapes.filter(s=>{ const b=bboxPts(s.pts); return inb((b.x0+b.x1)/2,(b.y0+b.y1)/2); }).map(s=>s.id)); } need2=true; return; }
+  if(g.type==='item'&&g.moved){ const it=getItem(g.id); if(it){ dropOn(it); moveRiders(g,it); } }
   if(g.type==='rect'&&g.p1){ const a=g.p0, b=g.p1, w=Math.abs(b[0]-a[0]), d=Math.abs(b[1]-a[1]); if(TOOL==='shape'){ if(w>=0.05&&d>=0.05) addShape(rectPts(Math.min(a[0],b[0]),Math.min(a[1],b[1]),w,d)); else need2=true; return; } if(w>=0.3&&d>=0.3) addRectRoom(Math.min(a[0],b[0]),Math.min(a[1],b[1]),w,d); else need2=true; return; }
   if(g.moved){ if(g.bg){ saveBg(); if(UI.tab==='edit') renderPanel(); return; } updateFab(); commit(); }
 }
@@ -1641,11 +1815,12 @@ function up2(e){
 }
 cv2.addEventListener('pointerup',up2); cv2.addEventListener('pointercancel',up2);
 cv2.addEventListener('pointerleave',()=>{ if(!P2.g&&(D.hover||HOV)){ HOV=null; need2=true; } });
-cv2.addEventListener('dblclick',()=>{ if(isDraw()&&D.pts.length>=(TOOL==='wire'?2:3)) finishDraw(); });
+cv2.addEventListener('dblclick',()=>{ if(isDraw()&&D.pts.length>=(TOOL==='wire'||pathMode()?2:3)) finishDraw(); });
 cv2.addEventListener('wheel',e=>{ e.preventDefault(); const p=xy(e,cv2); zoom2(Math.exp(-e.deltaY*(e.deltaMode===1?0.05:0.0015)),p[0],p[1]); },{passive:false});
 function tap2(g){
   const w=g.w0;
   if(g.btn!==0&&g.btn!==-1&&g.btn!==undefined) return;
+  if(TOOL==='multi'){ const h=g.hit; if(h) toggleMulti(h.kind,h.id); else select(null,true); return; }
   if(TOOL==='measure'){ const sp=snapPoint(w[0],w[1],MS.a,measureVerts()), p=[sp.x,sp.y]; if(!MS.a){ MS.a=p; MS.hover=null; need2=true; toast('แตะจุดที่สองเพื่อวัด'); } else addDim(MS.a,p); return; }
   if(TOOL==='text'){ addLabel(w); return; }
   if(TOOL==='shape'&&UI.shapeMode==='circle'){ const sc=snapPoint(w[0],w[1],null,allVerts()); addShape(circlePts([sc.x,sc.y],0.5)); return; }
@@ -1655,19 +1830,20 @@ function tap2(g){
   const h=g.hit;
   if(!h){ select(null); return; }
   if(h.kind==='rot') return;
+  if(g.sh&&(h.kind==='item'||h.kind==='shape')){ toggleMulti(h.kind,h.id); return; }
   if(h.kind==='corner'){ select({kind:'room',id:h.room,corner:h.i}); return; }
   if(h.kind==='edge'){ select({kind:'room',id:h.room,wall:h.i}); return; }
   if(h.kind==='scorner'){ select({kind:'shape',id:h.id}); return; }
   if(h.kind==='wcorner'){ select({kind:'wire',id:h.id,i:h.i}); return; }
   if(h.kind==='dcorner'){ select({kind:'dim',id:h.id}); return; }
   if(h.kind==='bgsize') return;
-  select({kind:h.kind,id:h.id});
+  selectHit(h);
 }
 
 /* ---------------- วาดห้องเอง ---------------- */
 function drawAdd(w){
   const last=D.pts[D.pts.length-1]; const sp=snapPoint(w[0],w[1],last,drawVerts()); const p=[sp.x,sp.y];
-  if(TOOL==='wire'){ if(D.pts.length>=2&&Math.hypot((p[0]-last[0])*V2.s,(p[1]-last[1])*V2.s)<16){ finishDraw(); return; } }
+  if(TOOL==='wire'||pathMode()){ if(D.pts.length>=2&&Math.hypot((p[0]-last[0])*V2.s,(p[1]-last[1])*V2.s)<16){ finishDraw(); return; } if(pathMode()&&D.pts.length>=3){ const f=D.pts[0]; if(Math.hypot((p[0]-f[0])*V2.s,(p[1]-f[1])*V2.s)<16){ D.closed=true; finishDraw(); return; } } }
   else if(D.pts.length>=3){ const f=D.pts[0]; if(Math.hypot((p[0]-f[0])*V2.s,(p[1]-f[1])*V2.s)<16){ finishDraw(); return; } }
   if(last&&Math.abs(last[0]-p[0])<1e-6&&Math.abs(last[1]-p[1])<1e-6) return;
   D.pts.push(p); D.hover=null; D.guides=[]; updDrawBar(); need2=true;
@@ -1684,6 +1860,7 @@ function drawTyped(){
 function finishDraw(){
   const pts=[]; D.pts.forEach(q=>{ const l=pts[pts.length-1]; if(!l||Math.hypot(l[0]-q[0],l[1]-q[1])>1e-4) pts.push(q); });
   if(TOOL==='wire'){ if(pts.length<2){ toast('แตะอย่างน้อย 2 จุด'); return; } addWire(pts); return; }
+  if(pathMode()){ if(pts.length<2){ toast('แตะอย่างน้อย 2 จุด'); return; } let cl=!!D.closed; if(pts.length>3){ const f=pts[0], l=pts[pts.length-1]; if(Math.hypot(f[0]-l[0],f[1]-l[1])<1e-4){ pts.pop(); cl=true; } } addSweep(pts,cl); return; }
   if(pts.length>1){ const f=pts[0], l=pts[pts.length-1]; if(Math.hypot(f[0]-l[0],f[1]-l[1])<1e-4) pts.pop(); }
   if(pts.length<3){ toast('ต้องมีอย่างน้อย 3 มุม'); return; }
   if(TOOL==='shape'){ if(Math.abs(area2(pts))/2<0.002){ toast('รูปทรงเล็กเกินไป'); return; } addShape(pts); return; }
@@ -1694,7 +1871,8 @@ function finishDraw(){
 function updDrawBar(){
   const n=D.pts.length, wi=TOOL==='wire', kb=$('dbKinds'); kb.hidden=!wi; $('dbClose').textContent=wi?'จบสาย':'ปิดห้อง';
   if(wi){ kb.innerHTML=Object.keys(WIRE_KINDS).map(k=>`<button type="button" data-wk="${k}" aria-pressed="${UI.wireKind===k}">${WIRE_KINDS[k][0]}</button>`).join(''); $('dbTxt').textContent=n?('วางแล้ว '+n+' จุด'+(n>=2?' · แตะจุดสุดท้ายซ้ำเพื่อจบสาย':'')):'แตะทีละจุด เริ่มจากตู้ไฟหรือสวิตช์'; $('dbUndo').disabled=!n; $('dbClose').disabled=n<2; return; }
-  if(TOOL==='shape'){ kb.hidden=false; kb.innerHTML=[['poly','มุม/สี่เหลี่ยม'],['circle','วงกลม']].map(([k,t])=>`<button type="button" data-sm="${k}" aria-pressed="${UI.shapeMode===k}">${t}</button>`).join(''); }
+  if(TOOL==='shape'){ kb.hidden=false; kb.innerHTML=[['poly','มุม/สี่เหลี่ยม'],['circle','วงกลม'],['path','เส้นทาง (Follow Me)']].map(([k,t])=>`<button type="button" data-sm="${k}" aria-pressed="${UI.shapeMode===k}">${t}</button>`).join(''); }
+  if(pathMode()){ $('dbClose').textContent='จบเส้น'; $('dbTxt').textContent=n?('วางแล้ว '+n+' จุด'+(n>=2?' · แตะจุดสุดท้ายซ้ำเพื่อจบ แตะจุดแรกเพื่อต่อเป็นวง':'')):'แตะทีละจุดตามทางที่จะให้รูปทรงวิ่งไป เช่น ราว ท่อ ขอบคันหิน'; $('dbUndo').disabled=!n; $('dbClose').disabled=n<2; return; }
   updDrawBarRoom(n);
   if(TOOL==='shape'&&UI.shapeMode==='circle') $('dbTxt').textContent='ลากจากจุดกลางออกไปเพื่อวาดวงกลม หรือแตะเพื่อวางวงกลม 1 ม.';
 }
@@ -1728,7 +1906,11 @@ function init3d(){
   const sun=new T.DirectionalLight(0xffffff,0.72); sun.castShadow=true; const ms=isWide()?2048:1024; sun.shadow.mapSize.set(ms,ms); sun.shadow.bias=-0.0005; sun.shadow.normalBias=0.02; sc.add(sun); sc.add(sun.target); R3.sun=sun;
   R3.groundMat=new T.MeshBasicMaterial({color:TK.ground}); const gr=new T.Mesh(new T.PlaneGeometry(400,400),R3.groundMat); gr.rotation.x=-Math.PI/2; gr.position.y=-0.004; sc.add(gr);
   R3.shell=new T.Group(); sc.add(R3.shell); R3.itemsRoot=new T.Group(); sc.add(R3.itemsRoot); R3.roof=new T.Group(); R3.roof.visible=UI.roof; sc.add(R3.roof); R3.shapesRoot=new T.Group(); sc.add(R3.shapesRoot); R3.wiresRoot=new T.Group(); sc.add(R3.wiresRoot); R3.lamps=new T.Group(); sc.add(R3.lamps);
-  R3.selMat=new T.LineBasicMaterial({color:TK.accent}); R3.selBox=new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(1,1,1)),R3.selMat); R3.selBox.visible=false; sc.add(R3.selBox);
+  R3.selMat=new T.LineBasicMaterial({color:TK.accent}); R3.selBox=new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(1,1,1)),R3.selMat); R3.selBox.visible=false; R3.selBox.rotation.order='YXZ'; sc.add(R3.selBox);
+  R3.ground=gr; R3.textRoot=new T.Group(); sc.add(R3.textRoot); R3.terrRoot=new T.Group(); sc.add(R3.terrRoot);
+  r.localClippingEnabled=true; R3.clip=new T.Plane(new T.Vector3(-1,0,0),0);
+  R3.xrMat=new T.MeshStandardMaterial({color:'#9fb4bf',transparent:true,opacity:0.16,depthWrite:false,side:T.DoubleSide,roughness:1});
+  R3.brush=new T.Mesh(new T.RingGeometry(0.93,1,48),new T.MeshBasicMaterial({color:TK.accent,side:T.DoubleSide,depthTest:false,transparent:true,opacity:0.9})); R3.brush.rotation.x=-Math.PI/2; R3.brush.renderOrder=5; R3.brush.visible=false; sc.add(R3.brush);
   R3.warnMat=new T.MeshBasicMaterial({color:TK.warn,transparent:true,opacity:0.35,depthWrite:false,side:T.DoubleSide});
   R3.rt=new T.WebGLRenderTarget(16,16); R3.tScene=new T.Scene(); R3.tScene.add(new T.HemisphereLight(0xffffff,0x8a8070,0.95)); const dl=new T.DirectionalLight(0xffffff,0.55); dl.position.set(0.6,3,1.2); R3.tScene.add(dl); R3.tCam=new T.OrthographicCamera(-1,1,1,-1,0.01,20);
   R3.ray=new T.Raycaster(); R3.ok=true; theme3d();
@@ -1766,7 +1948,7 @@ function setNight(on){
 }
 function resize3d(){ if(!R3.ok) return; const r=$('pane3d').getBoundingClientRect(); if(r.width<2||r.height<2) return; W3=r.width; H3=r.height; R3.renderer.setSize(W3,H3,false); R3.cam.aspect=W3/H3; R3.cam.updateProjectionMatrix(); need3=true; }
 function disposeTree(o){ o.traverse(m=>{ if(m.geometry) m.geometry.dispose(); }); }
-function prism(q,y0,y1,mats){ const s=new T.Shape(q.map(p=>new T.Vector2(p[0],-p[1]))); const g=new T.ExtrudeGeometry(s,{depth:Math.max(0.001,y1-y0),bevelEnabled:false}); const m=new T.Mesh(g,mats); m.rotation.x=-Math.PI/2; m.position.y=y0; m.castShadow=true; m.receiveShadow=true; return m; }
+function prism(q,y0,y1,mats,hole){ const s=new T.Shape(q.map(p=>new T.Vector2(p[0],-p[1]))); if(hole) s.holes.push(new T.Path(hole.map(p=>new T.Vector2(p[0],-p[1])))); const g=new T.ExtrudeGeometry(s,{depth:Math.max(0.001,y1-y0),bevelEnabled:false}); const m=new T.Mesh(g,mats); m.rotation.x=-Math.PI/2; m.position.y=y0; m.castShadow=true; m.receiveShadow=true; return m; }
 const TEX={};
 function floorMat(r){
   const k=r.floor+r.floorColor; if(TEX[k]) return TEX[k];
@@ -1997,7 +2179,7 @@ function roofOver(g,rooms,style){
   }
 }
 function updateWallCut(force){
-  if(!R3.ok) return; const cp=R3.cam.position, mode=(WK.on||roofShown())?'full':UI.wallMode;
+  if(!R3.ok) return; const cp=R3.cam.position, mode=(WK.on||roofShown()||UI.xray||R3.full)?'full':UI.wallMode;
   R3.walls.forEach(w=>{ const low=w.cut&&(mode==='low'||(mode==='auto'&&((cp.x-w.cx)*w.nx+(cp.z-w.cy)*w.ny)>0.02)); if(w.low===low&&!force) return; w.low=low;
     w.g.children.forEach(m=>{ const u=m.userData||{}; if(u.keep) return; if(u.base) m.scale.z=low?Math.min(1,LOWH/u.h):1; else m.visible=!low; }); });
 }
@@ -2005,13 +2187,17 @@ function syncItems3d(){
   const seen={};
   for(let k=0;k<=P.cur;k++){ const ey=elevOf(k); P.floors[k].items.forEach(it=>{
     const c=C[it.type]; let o=R3.items[it.id]; const key=it.type+'|'+(it.color||'');
-    if(!o||o.key!==key){ if(o){ R3.itemsRoot.remove(o.g); disposeTree(o.g); } const g=new T.Group(), m=new T.Group(); c.make(m,it); g.add(m); const ft=new T.Mesh(new T.PlaneGeometry(1,1),R3.warnMat); ft.rotation.x=-Math.PI/2; ft.position.y=0.012; ft.visible=false; g.add(ft); g.userData.itemId=it.id; R3.itemsRoot.add(g); o={g,m,ft,key}; R3.items[it.id]=o; }
-    o.g.position.set(it.x,ey+(it.elev||0),it.y); o.g.rotation.y=-it.rot*Math.PI/180; o.m.scale.set(it.w/c.w,itemH(it)/c.h,it.d/c.d); o.ft.scale.set(it.w,it.d,1); o.ft.position.y=0.012-(it.elev||0); o.ft.visible=k===P.cur&&!!PROB[it.id];
+    if(!o||o.key!==key){ if(o){ R3.itemsRoot.remove(o.g); disposeTree(o.g); } const g=new T.Group(), pv=new T.Group(), m=new T.Group(); c.make(m,it); pv.add(m); g.add(pv); const ft=new T.Mesh(new T.PlaneGeometry(1,1),R3.warnMat); ft.rotation.x=-Math.PI/2; ft.position.y=0.012; ft.visible=false; g.add(ft); g.userData.itemId=it.id; R3.itemsRoot.add(g); o={g,pv,m,ft,key}; R3.items[it.id]=o; }
+    /* เอียง 3 แกน: หมุนรอบกึ่งกลางชิ้น (pv) แล้วยกให้มุมล่างสุดแตะระดับ elev */
+    const H=itemH(it); o.g.position.set(it.x,ey+(it.elev||0),it.y); o.g.rotation.y=-it.rot*Math.PI/180; o.pv.position.y=-tiltLow(it); o.pv.rotation.set((it.tx||0)*D2R,0,(it.tz||0)*D2R); o.m.position.y=-H/2; o.m.scale.set(it.w/c.w,H/c.h,it.d/c.d); o.ft.scale.set(it.w,it.d,1); o.ft.position.y=0.012-(it.elev||0); o.ft.visible=k===P.cur&&!!PROB[it.id];
     seen[it.id]=1;
   }); }
   Object.keys(R3.items).forEach(id=>{ if(!seen[id]){ R3.itemsRoot.remove(R3.items[id].g); disposeTree(R3.items[id].g); delete R3.items[id]; } });
   const so=selObj();
-  if(so&&SEL.kind==='item'){ const h=itemH(so); R3.selBox.visible=true; R3.selBox.position.set(so.x,elevOf(P.cur)+(so.elev||0)+h/2,so.y); R3.selBox.scale.set(so.w+0.04,h+0.04,so.d+0.04); R3.selBox.rotation.y=-so.rot*Math.PI/180; } else R3.selBox.visible=false;
+  if(so&&SEL.kind==='item'){ const h=itemH(so); R3.selBox.visible=true; R3.selBox.position.set(so.x,elevOf(P.cur)+(so.elev||0)-tiltLow(so),so.y); R3.selBox.scale.set(so.w+0.04,h+0.04,so.d+0.04); R3.selBox.rotation.set((so.tx||0)*D2R,-so.rot*D2R,(so.tz||0)*D2R,'YXZ'); }
+  else if(so&&SEL.kind==='multi'){ const b=multiBox(so); let y0=1e9, y1=-1e9; so.items.forEach(it=>{ y0=Math.min(y0,it.elev||0); y1=Math.max(y1,topOf(it)); }); so.shapes.forEach(s=>{ y0=Math.min(y0,s.elev); y1=Math.max(y1,s.elev+s.h); });
+    R3.selBox.visible=true; R3.selBox.position.set((b.x0+b.x1)/2,elevOf(P.cur)+(y0+y1)/2,(b.y0+b.y1)/2); R3.selBox.scale.set(b.x1-b.x0+0.06,y1-y0+0.06,b.y1-b.y0+0.06); R3.selBox.rotation.set(0,0,0,'YXZ'); }
+  else R3.selBox.visible=false;
   R3.spin=[]; [R3.itemsRoot,R3.roof].forEach(root=>root.traverse(x=>{ if(x.userData&&x.userData.spin) R3.spin.push(x); }));
 }
 function shapeMat(s){
@@ -2024,12 +2210,46 @@ function shapeMat(s){
   return TEX[k]=m;
 }
 function syncShapes3d(){
-  const sel=SEL&&SEL.kind==='shape'?SEL.id:null, key=JSON.stringify([P.cur,P.wallH,P.floors.slice(0,P.cur+1).map(f=>f.shapes),sel]); if(key===R3.skey) return; R3.skey=key;
+  const sel=SEL&&SEL.kind==='shape'?SEL.id:null, ms=SEL&&SEL.kind==='multi'?SEL.shapes.join(','):'', key=JSON.stringify([P.cur,P.wallH,P.floors.slice(0,P.cur+1).map(f=>f.shapes),sel,ms]); if(key===R3.skey) return; R3.skey=key;
   const g=R3.shapesRoot; disposeTree(g); while(g.children.length) g.remove(g.children[0]);
   for(let k=0;k<=P.cur;k++){ const ey=elevOf(k); P.floors[k].shapes.forEach(s=>{
-    const m=prism(s.pts,ey+s.elev,ey+s.elev+s.h,shapeMat(s)); m.castShadow=s.mat!=='glass'; m.userData={shapeId:s.id,floor:k}; g.add(m);
-    if(s.id===sel&&k===P.cur){ const e=new T.LineSegments(new T.EdgesGeometry(m.geometry),R3.selMat); e.rotation.copy(m.rotation); e.position.copy(m.position); g.add(e); }
+    const on=(s.id===sel||inMulti('shape',s.id))&&k===P.cur;
+    if(s.sweep){ const m=sweepMesh(s,ey); m.userData={shapeId:s.id,floor:k}; g.add(m); if(on){ const e=new T.LineSegments(new T.EdgesGeometry(m.geometry,40),R3.selMat); g.add(e); }
+      if(s.sweep.posts&&s.elev>0.05){ const r=Math.min(0.035,Math.max(0.012,s.sweep.w/2)), pg=new T.CylinderGeometry(r,r,1,10); postsOf(s).forEach(q=>{ const p=new T.Mesh(pg,shapeMat(s)); const hh=s.elev+s.h/2; p.scale.y=hh; p.position.set(q[0],ey+hh/2,q[1]); p.castShadow=true; p.userData={shapeId:s.id,floor:k}; g.add(p); }); }
+      return; }
+    const m=prism(s.pts,ey+s.elev,ey+s.elev+s.h,shapeMat(s),s.hole); m.castShadow=s.mat!=='glass'; m.userData={shapeId:s.id,floor:k}; g.add(m);
+    if(on){ const e=new T.LineSegments(new T.EdgesGeometry(m.geometry),R3.selMat); e.rotation.copy(m.rotation); e.position.copy(m.position); g.add(e); }
   }); }
+}
+/* ---- Follow Me: กวาดรูปหน้าตัดไปตามเส้นทาง (ต่อมุมแบบตัดเฉียงให้หนาเท่ากันทั้งเส้น) ---- */
+function sweepProfile(k,w,h){
+  const hw=w/2;
+  if(k==='round'){ const o=[]; for(let i=0;i<16;i++){ const a=i/16*Math.PI*2; o.push([Math.cos(a)*hw,h/2+Math.sin(a)*h/2]); } return o; }
+  if(k==='curb') return [[-hw,0],[hw,0],[hw,h*0.75],[hw-w*0.25,h],[-hw,h]];
+  if(k==='cove'){ const o=[[-hw,0],[hw,0]]; for(let i=0;i<=6;i++){ const a=i/6*Math.PI/2; o.push([hw-w*0.75*Math.sin(a),h*0.25+h*0.75*(1-Math.cos(a))]); } o.push([-hw,h]); return o; }
+  if(k==='tri') return [[-hw,0],[hw,0],[0,h]];
+  return [[-hw,0],[hw,0],[hw,h],[-hw,h]];
+}
+function sweepGeo(path,closed,prof,y0,smooth){
+  const n=path.length, m=prof.length, pos=[], uv=[], idx=[], dir=(a,b)=>{ const dx=b[0]-a[0], dz=b[1]-a[1], L=Math.hypot(dx,dz)||1; return [dx/L,dz/L]; };
+  let run=0;
+  for(let i=0;i<n;i++){
+    const prev=closed?path[(i-1+n)%n]:path[Math.max(0,i-1)], next=closed?path[(i+1)%n]:path[Math.min(n-1,i+1)];
+    const t0=(i>0||closed)?dir(prev,path[i]):dir(path[i],next), t1=(i<n-1||closed)?dir(path[i],next):t0;
+    let bx=t0[0]+t1[0], bz=t0[1]+t1[1], bl=Math.hypot(bx,bz); if(bl<1e-6){ bx=t1[0]; bz=t1[1]; bl=1; } bx/=bl; bz/=bl;
+    const ux=-bz, uz=bx, k=1/Math.max(0.25,ux*(-t1[1])+uz*t1[0]);
+    if(i) run+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+    prof.forEach(([u,v],j)=>{ pos.push(path[i][0]+ux*u*k,y0+v,path[i][1]+uz*u*k); uv.push(run/1.2,j/m); });
+  }
+  const segs=closed?n:n-1;
+  for(let i=0;i<segs;i++){ const i2=(i+1)%n; for(let j=0;j<m;j++){ const j2=(j+1)%m, a=i*m+j, b=i*m+j2, c=i2*m+j2, d=i2*m+j; idx.push(a,b,c,a,c,d); } }
+  if(!closed){ const tri=T.ShapeUtils.triangulateShape(prof.map(q=>new T.Vector2(q[0],q[1])),[]); [0,n-1].forEach((ri,e)=>{ const base=pos.length/3; for(let j=0;j<m;j++){ const s=(ri*m+j)*3; pos.push(pos[s],pos[s+1],pos[s+2]); uv.push(0,0); } tri.forEach(t=>{ if(e) idx.push(base+t[0],base+t[1],base+t[2]); else idx.push(base+t[2],base+t[1],base+t[0]); }); }); }
+  let g=new T.BufferGeometry(); g.setAttribute('position',new T.Float32BufferAttribute(pos,3)); g.setAttribute('uv',new T.Float32BufferAttribute(uv,2)); g.setIndex(idx);
+  if(!smooth) g=g.toNonIndexed(); g.computeVertexNormals(); return g;
+}
+function sweepMesh(s,ey){
+  const sw=s.sweep, base=shapeMat(s), k='ds'+s.mat+s.color; if(!TEX[k]){ TEX[k]=base.clone(); TEX[k].side=T.DoubleSide; }
+  const m=new T.Mesh(sweepGeo(s.pts,sw.closed&&s.pts.length>2,sweepProfile(sw.prof,sw.w,s.h),ey+s.elev,sw.prof==='round'),TEX[k]); m.castShadow=s.mat!=='glass'; m.receiveShadow=true; return m;
 }
 const wireMat=c=>mat(WIRE_KINDS[c][1],{roughness:0.5});
 function syncWires3d(){
@@ -2042,7 +2262,145 @@ function syncWires3d(){
     w.pts.forEach((q,i)=>{ const d=dr[i]; if(d&&yc-d.y>0.02) rod(g,new T.Vector3(q[0],ey+yc,q[1]),new T.Vector3(q[0],ey+d.y,q[1]),r,m); });
   }); }
 }
-function sync3d(){ if(!R3.ok||!P) return; const k=shellKey(); if(k!==R3.key){ R3.key=k; buildShell(); } syncItems3d(); syncShapes3d(); syncWires3d(); syncLamps(); need3=true; }
+/* ---- ตัวหนังสือ 3D: วาดตัวอักษร (ไทยได้) ลงภาพเล็ก แล้วรวมจุดที่ติดกันเป็นแท่งสี่เหลี่ยม ดึงให้หนา ---- */
+const TG={};
+function textGeo(text,size,dep,up){
+  const key=[text,size,dep,up?1:0,R3.fontOk?1:0].join('|'); if(TG[key]) return TG[key];
+  if(Object.keys(TG).length>80) Object.keys(TG).forEach(q=>{ TG[q].dispose(); delete TG[q]; });
+  const px=72, font='600 '+px+'px "Bai Jamjuree","IBM Plex Sans Thai",sans-serif', cv=document.createElement('canvas'); let x=cv.getContext('2d'); x.font=font;
+  const tw=Math.ceil(x.measureText(text).width)+16, th=px*2; cv.width=tw; cv.height=th; x=cv.getContext('2d'); x.font=font; x.textBaseline='alphabetic'; x.fillStyle='#000'; x.fillText(text,8,Math.round(px*1.35));
+  const d=x.getImageData(0,0,tw,th).data, on=(i,j)=>d[(j*tw+i)*4+3]>120, rects=[]; let open={}, x0=tw, x1=0, y1=0, y0=th;
+  for(let j=0;j<th;j++){ const nx={}; let i=0; while(i<tw){ if(!on(i,j)){ i++; continue; } let e=i; while(e<tw&&on(e,j)) e++; const kk=i+','+e, r=open[kk]; if(r){ r.y1=j+1; nx[kk]=r; } else { const q={x0:i,x1:e,y0:j,y1:j+1}; rects.push(q); nx[kk]=q; } if(i<x0) x0=i; if(e>x1) x1=e; if(j<y0) y0=j; if(j+1>y1) y1=j+1; i=e; } open=nx; }
+  const s=size/px, cx=(x0+x1)/2, Ht=(y1-y0)*s, pos=[], nor=[];
+  const quad=(a,b,c,dd,n)=>{ pos.push(...a,...b,...c,...a,...c,...dd); for(let t=0;t<6;t++) nor.push(...n); };
+  rects.forEach(r=>{ const X0=(r.x0-cx)*s, X1=(r.x1-cx)*s, Y0=(y1-r.y1)*s, Y1=(y1-r.y0)*s, Z0=-dep/2, Z1=dep/2;
+    quad([X0,Y0,Z1],[X1,Y0,Z1],[X1,Y1,Z1],[X0,Y1,Z1],[0,0,1]); quad([X1,Y0,Z0],[X0,Y0,Z0],[X0,Y1,Z0],[X1,Y1,Z0],[0,0,-1]);
+    quad([X0,Y1,Z1],[X1,Y1,Z1],[X1,Y1,Z0],[X0,Y1,Z0],[0,1,0]); quad([X0,Y0,Z0],[X1,Y0,Z0],[X1,Y0,Z1],[X0,Y0,Z1],[0,-1,0]);
+    quad([X1,Y0,Z1],[X1,Y0,Z0],[X1,Y1,Z0],[X1,Y1,Z1],[1,0,0]); quad([X0,Y0,Z0],[X0,Y0,Z1],[X0,Y1,Z1],[X0,Y1,Z0],[-1,0,0]); });
+  if(!up) for(let i=0;i<pos.length;i+=3){ const yy=pos[i+1], zz=pos[i+2]; pos[i+1]=zz+dep/2; pos[i+2]=-(yy-Ht/2); const ny=nor[i+1], nz=nor[i+2]; nor[i+1]=nz; nor[i+2]=-ny; }
+  const g=new T.BufferGeometry(); g.setAttribute('position',new T.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new T.Float32BufferAttribute(nor,3)); return TG[key]=g;
+}
+function syncText3d(){
+  if(!R3.fontReq){ R3.fontReq=true; const done=()=>{ R3.fontOk=true; R3.tkey=null; sync3d(); }; try{ document.fonts.load('600 72px "Bai Jamjuree"','ก').then(done,done); }catch(e){ R3.fontOk=true; } }
+  const key=JSON.stringify([P.cur,R3.fontOk,P.wallH,P.floors.slice(0,P.cur+1).map(f=>f.labels.filter(l=>l.d3))]); if(key===R3.tkey) return; R3.tkey=key;
+  const g=R3.textRoot; while(g.children.length) g.remove(g.children[0]);
+  for(let k=0;k<=P.cur;k++){ const ey=elevOf(k); P.floors[k].labels.forEach(l=>{ if(!l.d3) return; const m=new T.Mesh(textGeo(l.text,l.size,l.d3,l.up),mat(l.color,{roughness:0.55})); m.castShadow=true; m.receiveShadow=true; m.position.set(l.x,ey+(l.elev||0),l.y); m.rotation.y=-(l.rot||0)*D2R; m.userData={labelId:l.id,floor:k}; g.add(m); }); }
+}
+
+/* ---- พื้นดินสูงต่ำ (แบบ SketchUp Sandbox): P.terrain = ตารางความสูงเป็นซม. ห่างกันทุก cell ม. อยู่ที่ชั้น 1 ---- */
+function newTerrain(){
+  const b=bounds3d(), mg=4; let c=0.5; const x0=Math.floor(b.x0-mg), y0=Math.floor(b.y0-mg), w=Math.ceil(b.x1+mg)-x0, d=Math.ceil(b.y1+mg)-y0; while(w/c>120||d/c>120) c*=2;
+  const nx=Math.round(w/c), ny=Math.round(d/c); return {x0,y0,cell:c,nx,ny,h:new Array((nx+1)*(ny+1)).fill(0),color:'#5a8f43'};
+}
+function terrainAt(x,y){ const t=P.terrain; if(!t) return 0; const fx=clamp((x-t.x0)/t.cell,0,t.nx), fy=clamp((y-t.y0)/t.cell,0,t.ny), i=Math.min(t.nx-1,Math.floor(fx)), j=Math.min(t.ny-1,Math.floor(fy)), u=fx-i, v=fy-j, n1=t.nx+1, h=t.h; return ((h[j*n1+i]*(1-u)+h[j*n1+i+1]*u)*(1-v)+(h[(j+1)*n1+i]*(1-u)+h[(j+1)*n1+i+1]*u)*v)/100; }
+function syncTerrain3d(){
+  const t=P.terrain, key=JSON.stringify([t?[t.x0,t.y0,t.cell,t.nx,t.ny,t.color]:0,P.floors[0].rooms.map(r=>r.pts),P.wallT]);
+  if(key!==R3.tgk){ R3.tgk=key; const g=R3.terrRoot; g.traverse(o=>{ if(o.material&&o.material.map) o.material.map.dispose(); if(o.material) o.material.dispose(); }); disposeTree(g); while(g.children.length) g.remove(g.children[0]); R3.terr=null; if(!t) return;
+    const W=t.nx*t.cell, D=t.ny*t.cell, geo=new T.PlaneGeometry(W,D,t.nx,t.ny); geo.rotateX(-Math.PI/2); geo.translate(t.x0+W/2,0,t.y0+D/2);
+    const tex=new T.CanvasTexture(floorCanvas('grass',t.color)); tex.wrapS=tex.wrapT=T.RepeatWrapping; tex.repeat.set(W/1.2,D/1.2); tex.anisotropy=R3.renderer.capabilities.getMaxAnisotropy();
+    const m=new T.Mesh(geo,new T.MeshStandardMaterial({map:tex,color:'#c9d6c2',roughness:1})); m.receiveShadow=true; m.castShadow=true; g.add(m);
+    const pos=geo.attributes.position, mask=new Uint8Array(pos.count), rooms=P.floors[0].rooms;
+    for(let i=0;i<pos.count;i++){ const x=pos.getX(i), z=pos.getZ(i); mask[i]=rooms.some(r=>pip(x,z,r.pts)||r.pts.some((q,k)=>{ const n=r.pts[(k+1)%r.pts.length]; return segProj(x,z,q[0],q[1],n[0],n[1]).d<P.wallT+0.05; }))?1:0; }
+    R3.terr={mesh:m,mask,href:null}; }
+  if(t&&R3.terr&&R3.terr.href!==t.h) updTerrainMesh();
+}
+function updTerrainMesh(){
+  const t=P.terrain, r=R3.terr; if(!t||!r) return; r.href=t.h; const pos=r.mesh.geometry.attributes.position;
+  for(let i=0;i<pos.count;i++){ const v=t.h[i]/100; pos.setY(i,r.mask[i]?Math.min(v,-0.03):v); }
+  pos.needsUpdate=true; r.mesh.geometry.computeVertexNormals(); r.mesh.geometry.computeBoundingSphere(); need3=true;
+}
+function terrHit(p){ if(!R3.terr) return null; R3.ray.setFromCamera(ndc(p),R3.cam); R3.terr.mesh.updateMatrixWorld(); const h=R3.ray.intersectObject(R3.terr.mesh,false)[0]; return h?h.point:null; }
+/* ปั้นดิน: ยก/ขุด = ลากขึ้นลงจากจุดที่กด · เกลี่ย = เฉลี่ยกับรอบ ๆ · ทำราบ = ค่อย ๆ กดลงหา 0 (แปรงขอบนุ่ม) */
+function sculpt(g,pt,dy){
+  const t=P.terrain; if(!t) return; const n1=t.nx+1, R=UI.tSize, i0=Math.max(0,Math.floor((pt.x-R-t.x0)/t.cell)), i1=Math.min(t.nx,Math.ceil((pt.x+R-t.x0)/t.cell)), j0=Math.max(0,Math.floor((pt.z-R-t.y0)/t.cell)), j1=Math.min(t.ny,Math.ceil((pt.z+R-t.y0)/t.cell)), h=t.h, old=h.slice();
+  for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){ const d=Math.hypot(t.x0+i*t.cell-pt.x,t.y0+j*t.cell-pt.z); if(d>=R) continue; const w=0.5*(1+Math.cos(Math.PI*d/R)), k=j*n1+i;
+    if(UI.tMode==='raise') h[k]=clamp(Math.round(g.base[k]+dy*100*w),-500,1500);
+    else if(UI.tMode==='flat') h[k]=Math.round(old[k]*(1-0.35*w));
+    else { const nb=[[i-1,j],[i+1,j],[i,j-1],[i,j+1]].filter(([a,b])=>a>=0&&b>=0&&a<=t.nx&&b<=t.ny).map(([a,b])=>old[b*n1+a]); const av=nb.reduce((s2,v)=>s2+v,0)/nb.length; h[k]=Math.round(old[k]+(av-old[k])*0.5*w); } }
+  updTerrainMesh(); need2=true;
+}
+function setTerra(on){
+  UI.terra=on&&!!P.terrain; $('terraBar').hidden=!UI.terra; if(R3.ok){ R3.brush.visible=false; R3.brush.material.color.set(TK.accent); } updTerraBar();
+  if(UI.terra){ if(WK.on) setWalk(false); if(P.cur!==0) setFloor(0); if(UI.view==='2d') setView(isWide()?'split':'3d'); select(null,true); toast('ลากขึ้นเพื่อยกเนิน ลากลงเพื่อขุดแอ่ง · สองนิ้ว/คลิกขวาเพื่อเลื่อนภาพ'); }
+  need3=true;
+}
+function updTerraBar(){ document.querySelectorAll('#tbMode [data-tm]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tm===UI.tMode?'true':'false')); document.querySelectorAll('#tbSize [data-ts]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.ts===UI.tSize?'true':'false')); $('tbTxt').textContent=UI.tMode==='raise'?'ลากขึ้น = ยกเนิน · ลากลง = ขุดแอ่ง':UI.tMode==='smooth'?'ลากถูไปมาเพื่อเกลี่ยให้เนียน':'ลากถูเพื่อทำให้ราบ'; }
+
+/* ---- ผนังโปร่ง (X-ray): ผนัง พื้นชั้นบน และหลังคากลายเป็นกระจกฝ้า มองเห็นของข้างใน ---- */
+function applyXray(){
+  if(!R3.ok) return; const on=UI.xray; if(!on&&!R3.xrOn) return; R3.xrOn=on;
+  [R3.shell,R3.roof].forEach(root=>root.traverse(m=>{ if(!m.isMesh||m.userData.room) return; const u=m.userData;
+    if(on&&!u.xr){ u.xr={m:m.material,cs:m.castShadow}; m.material=Array.isArray(m.material)?m.material.map(()=>R3.xrMat):R3.xrMat; m.castShadow=false; }
+    else if(!on&&u.xr){ m.material=u.xr.m; m.castShadow=u.xr.cs; delete u.xr; } }));
+}
+function setXray(on){ UI.xray=on; $('xrayBtn').setAttribute('aria-pressed',on?'true':'false'); if(!R3.ok) return; applyXray(); updateWallCut(true); need3=true; if(on&&UI.view==='2d') setView(isWide()?'split':'3d'); toast(on?'ผนังโปร่งแล้ว มองทะลุเห็นของข้างใน':'ผนังทึบตามเดิม'); }
+/* ---- ตัดดูข้างใน (Section plane): ตัดด้วยระนาบเดียว เลื่อนตำแหน่งด้วยแถบเลื่อน ---- */
+function updSec(){
+  if(!R3.ok||!P) return; const s=UI.sec, b=bounds3d(), pad=P.wallT+0.05, pl=R3.clip; let lo, hi;
+  if(s.ax==='y'){ lo=elevOf(P.cur)+0.05; hi=elevOf(P.cur)+P.wallH+(roofShown()?3:0.3); pl.normal.set(0,s.flip?1:-1,0); }
+  else if(s.ax==='x'){ lo=b.x0-pad; hi=b.x1+pad; pl.normal.set(s.flip?1:-1,0,0); }
+  else { lo=b.y0-pad; hi=b.y1+pad; pl.normal.set(0,0,s.flip?1:-1); }
+  const v=lo+(hi-lo)*s.t; pl.constant=s.flip?-v:v; need3=true;
+}
+function applyClip(){
+  if(!R3.ok) return; const on=UI.sec.on; if(!on&&!R3.clipOn) return; R3.clipOn=on; const planes=on?[R3.clip]:null;
+  R3.scene.traverse(o=>{ if(o===R3.ground||o===R3.brush||!o.material) return; (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(m.clippingPlanes!==planes){ m.clippingPlanes=planes; m.clipShadows=on; m.needsUpdate=true; } }); });
+}
+function setSec(on){
+  UI.sec.on=on; $('secBtn').setAttribute('aria-pressed',on?'true':'false'); $('secBar').hidden=!on; updSecBar(); if(!R3.ok) return; updSec(); applyClip(); need3=true;
+  if(on){ if(UI.view==='2d') setView(isWide()?'split':'3d'); toast('เลื่อนแถบเพื่อตัดดูข้างใน · เลือกตัดขวาง ตัดยาว หรือแนวนอน'); }
+}
+function updSecBar(){ document.querySelectorAll('#secAx [data-ax]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ax===UI.sec.ax?'true':'false')); $('secPos').value=UI.sec.t; }
+
+/* ---- ภาพ 360°: ถ่าย 6 ด้านจากจุดที่ยืน (CubeCamera) แล้วคลี่เป็นภาพพาโนรามา 2:1 ---- */
+let PANO=null;
+function panoSpot(){
+  if(WK.on) return new T.Vector3(WK.x,WK.eye,WK.z);
+  const so=selObj(), r=(so&&SEL.kind==='room'?so:so&&SEL.kind==='item'?roomAt(so.x,so.y):null)||roomAt(CAM.tx,CAM.tz)||P.rooms[0], lp=r?labelPoint(r.pts):[CAM.tx,CAM.tz];
+  return new T.Vector3(lp[0],elevOf(P.cur)+1.5,lp[1]);
+}
+function makePano(){
+  if(!R3.ok){ toast('เครื่องนี้เปิดภาพ 3D ไม่ได้'); return; }
+  const r=R3.renderer, W=isWide()?4096:2048, H=W/2, crt=new T.WebGLCubeRenderTarget(W/4,{generateMipmaps:false,minFilter:T.LinearFilter}), cc=new T.CubeCamera(0.05,300,crt);
+  cc.position.copy(panoSpot()); R3.scene.add(cc);
+  const lc=r.localClippingEnabled, sb=R3.selBox.visible, br=R3.brush.visible; r.localClippingEnabled=false; R3.selBox.visible=false; R3.brush.visible=false; R3.full=true; updateWallCut(true);
+  let out=null;
+  try{
+    cc.update(r,R3.scene);
+    const rt=new T.WebGLRenderTarget(W,H), sm=new T.ShaderMaterial({uniforms:{map:{value:crt.texture}},depthTest:false,depthWrite:false,
+      vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}',
+      fragmentShader:'uniform samplerCube map;varying vec2 vUv;void main(){float lon=(vUv.x-0.5)*6.2831853;float lat=(vUv.y-0.5)*3.1415927;vec3 d=vec3(cos(lat)*sin(lon),sin(lat),-cos(lat)*cos(lon));gl_FragColor=textureCube(map,d);}'});
+    const sc=new T.Scene(), q=new T.Mesh(new T.PlaneGeometry(2,2),sm); q.frustumCulled=false; sc.add(q);
+    r.setRenderTarget(rt); r.render(sc,new T.Camera()); const buf=new Uint8Array(W*H*4); r.readRenderTargetPixels(rt,0,0,W,H,buf); r.setRenderTarget(null);
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d'), img=x.createImageData(W,H);
+    for(let y=0;y<H;y++) img.data.set(buf.subarray((H-1-y)*W*4,(H-y)*W*4),y*W*4); x.putImageData(img,0,0); out=cv;
+    rt.dispose(); sm.dispose(); q.geometry.dispose();
+  }catch(e){ console.error(e); }
+  R3.scene.remove(cc); crt.dispose(); r.localClippingEnabled=lc; R3.selBox.visible=sb; R3.brush.visible=br; R3.full=false; updateWallCut(true); need3=true;
+  if(!out){ toast('ทำภาพ 360 ไม่สำเร็จ'); return; }
+  showPano(out);
+}
+/* ใส่ข้อมูล GPano (XMP) ในไฟล์ JPEG ให้ Facebook / Google Photos รู้ว่าเป็นภาพ 360 */
+function panoBlob(cv){
+  const b=b64bytes(cv.toDataURL('image/jpeg',0.9)), W=cv.width, H=cv.height, tags={ProjectionType:'equirectangular',UsePanoramaViewer:'True',FullPanoWidthPixels:W,FullPanoHeightPixels:H,CroppedAreaImageWidthPixels:W,CroppedAreaImageHeightPixels:H,CroppedAreaLeftPixels:0,CroppedAreaTopPixels:0};
+  const xmp='http://ns.adobe.com/xap/1.0/\u0000<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:GPano="http://ns.google.com/photos/1.0/panorama/">'+Object.keys(tags).map(k=>'<GPano:'+k+'>'+tags[k]+'</GPano:'+k+'>').join('')+'</rdf:Description></rdf:RDF></x:xmpmeta>';
+  const xb=new TextEncoder().encode(xmp), L=xb.length+2, seg=new Uint8Array(4+xb.length); seg[0]=0xFF; seg[1]=0xE1; seg[2]=L>>8; seg[3]=L&255; seg.set(xb,4);
+  let at=2; if(b[2]===0xFF&&b[3]===0xE0) at=4+((b[4]<<8)|b[5]);
+  const out=new Uint8Array(b.length+seg.length); out.set(b.subarray(0,at),0); out.set(seg,at); out.set(b.subarray(at),at+seg.length); return new Blob([out],{type:'image/jpeg'});
+}
+function showPano(cv){
+  const v=$('panoView'); PANO={cv,url:cv.toDataURL('image/jpeg',0.85),x:0}; v.style.backgroundImage='url('+PANO.url+')'; $('panoBox').hidden=false;
+  requestAnimationFrame(()=>{ const r=v.getBoundingClientRect(); PANO.x=r.width/2-r.height; v.style.backgroundPosition=PANO.x+'px 50%'; });
+}
+function closePano(){ $('panoBox').hidden=true; $('panoView').style.backgroundImage=''; PANO=null; }
+(function panoDrag(){
+  const v=$('panoView'); let id=null, lx=0;
+  v.addEventListener('pointerdown',e=>{ id=e.pointerId; lx=e.clientX; try{ v.setPointerCapture(id); }catch(_){} v.style.cursor='grabbing'; e.preventDefault(); });
+  v.addEventListener('pointermove',e=>{ if(e.pointerId!==id||!PANO) return; PANO.x+=e.clientX-lx; lx=e.clientX; v.style.backgroundPosition=PANO.x+'px 50%'; });
+  const end=e=>{ if(e.pointerId===id){ id=null; v.style.cursor=''; } }; v.addEventListener('pointerup',end); v.addEventListener('pointercancel',end);
+})();
+
+function sync3d(){ if(!R3.ok||!P) return; const k=shellKey(); if(k!==R3.key){ R3.key=k; buildShell(); } syncItems3d(); syncShapes3d(); syncWires3d(); syncText3d(); syncTerrain3d(); syncLamps(); applyXray(); applyClip(); if(UI.sec.on) updSec(); need3=true; }
 function applyCam(){
   if(!R3.ok) return; const c=R3.cam;
   if(WK.on){ c.position.set(WK.x,WK.eye,WK.z); c.lookAt(WK.x-Math.sin(WK.yaw)*Math.cos(WK.pitch),WK.eye+Math.sin(WK.pitch),WK.z-Math.cos(WK.yaw)*Math.cos(WK.pitch)); }
@@ -2060,6 +2418,8 @@ function pick3(p){
   for(const h of hits){ let o=h.object, vis=true; while(o&&!(o.userData&&o.userData.itemId)){ if(!o.visible) vis=false; o=o.parent; } if(o&&vis&&h.object.material!==R3.warnMat&&here.has(o.userData.itemId)){ best={kind:'item',id:o.userData.itemId,d:h.distance}; break; } }
   const sh=R3.ray.intersectObjects(R3.shapesRoot.children,false).find(h=>h.object.userData&&h.object.userData.shapeId&&h.object.userData.floor===P.cur);
   if(sh&&(!best||sh.distance<best.d)){ const n=sh.face?sh.face.normal.clone().transformDirection(sh.object.matrixWorld):null; return {kind:'shape',id:sh.object.userData.shapeId,top:!!(n&&n.y>0.6)}; }
+  const lh=R3.ray.intersectObjects(R3.textRoot.children,false).find(h=>h.object.userData.floor===P.cur);
+  if(lh&&(!best||lh.distance<best.d)) return {kind:'label',id:lh.object.userData.labelId};
   if(best) return best;
   const fh=R3.ray.intersectObjects(R3.floors,false); if(fh.length) return {kind:'room',id:fh[0].object.userData.room};
   return null;
@@ -2072,30 +2432,45 @@ cv3.addEventListener('pointerdown',e=>{
   const p=xy(e,cv3); G3.ptrs[e.pointerId]=p; const ids=Object.keys(G3.ptrs);
   if(ids.length===2){ end3(); const a=G3.ptrs[ids[0]], b=G3.ptrs[ids[1]]; G3.g={type:'pinch',d0:Math.hypot(a[0]-b[0],a[1]-b[1])||1,dist0:CAM.dist,m:[(a[0]+b[0])/2,(a[1]+b[1])/2]}; return; }
   if(ids.length>2) return;
+  if(UI.terra&&e.button===0&&!WK.on&&P.terrain){ const pt=terrHit(p); if(pt){ G3.g={type:'sculpt',pt,y0:p[1],base:P.terrain.h.slice(),lx:p[0],ly:p[1],moved:UI.tMode!=='raise'}; if(UI.tMode!=='raise') sculpt(G3.g,pt,0); e.preventDefault(); return; } }
   G3.g={type:'pending',x0:p[0],y0:p[1],lx:p[0],ly:p[1],btn:e.button,shift:e.shiftKey,hit:e.button===0?pick3(p):null}; e.preventDefault();
 });
+function brushAt(p){ const pt=terrHit(p); R3.brush.visible=!!pt; if(pt){ R3.brush.position.set(pt.x,pt.y+0.03,pt.z); R3.brush.scale.set(UI.tSize,UI.tSize,1); } need3=true; }
+/* 3D: ลากของที่อยู่ในกลุ่มหรือที่เลือกไว้หลายชิ้น = ย้ายไปพร้อมกัน */
+function grab3(g){
+  const h=g.hit, ob=h.kind==='item'?getItem(h.id):getShape(h.id); if(!ob) return false;
+  if(TOOL==='multi'&&!inMulti(h.kind,h.id)) toggleMulti(h.kind,h.id); else if(ob.grp&&!inMulti(h.kind,h.id)&&!(SEL&&SEL.id===h.id)) select(groupSel(ob.grp));
+  if(!inMulti(h.kind,h.id)) return false;
+  const hp=floorHit([g.x0,g.y0],elevOf(P.cur)); if(!hp){ g.type='orbit'; return true; } startMulti(g); g.type='multi3'; g.hp0=hp; return true;
+}
 cv3.addEventListener('pointermove',e=>{
-  if(!R3.ok) return; const p=xy(e,cv3); if(G3.ptrs[e.pointerId]) G3.ptrs[e.pointerId]=p; const g=G3.g; if(!g||g.type==='dead') return;
+  if(!R3.ok) return; const p=xy(e,cv3); if(G3.ptrs[e.pointerId]) G3.ptrs[e.pointerId]=p; const g=G3.g; if(!g&&UI.terra){ brushAt(p); return; } if(!g||g.type==='dead') return;
+  if(g.type==='sculpt'){ if(UI.tMode==='raise') sculpt(g,g.pt,(g.y0-p[1])*CAM.dist*0.0025); else { const pt=terrHit(p); if(pt) sculpt(g,pt,0); } brushAt(p); g.moved=true; return; }
   if(g.type==='pinch'){ const ids=Object.keys(G3.ptrs); if(ids.length<2) return; const a=G3.ptrs[ids[0]], b=G3.ptrs[ids[1]]; const d=Math.hypot(a[0]-b[0],a[1]-b[1])||1, m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(WK.on){ g.m=m; return; } CAM.dist=clamp(g.dist0*g.d0/d,1.2,80); pan3(m[0]-g.m[0],m[1]-g.m[1]); g.m=m; return; }
   if(g.type==='pending'){ if(Math.hypot(p[0]-g.x0,p[1]-g.y0)<5) return;
     if(WK.on) g.type='look';
     else if(g.btn===2||g.btn===1||g.shift) g.type='pan';
-    else if(g.hit&&g.hit.kind==='item'&&TOOL==='select'){ const it=getItem(g.hit.id); const hp=floorHit([g.x0,g.y0],elevOf(P.cur)+(it.elev||0)); if(hp){ g.type='item'; g.id=it.id; g.off=[it.x-hp.x,it.y-hp.z]; if(!(SEL&&SEL.id===it.id)) select({kind:'item',id:it.id}); } else g.type='orbit'; }
+    else if(g.hit&&(g.hit.kind==='item'||g.hit.kind==='shape')&&(TOOL==='select'||TOOL==='multi')&&grab3(g)){ /* ย้ายทั้งชุด */ }
+    else if(g.hit&&g.hit.kind==='item'&&TOOL==='select'){ const it=getItem(g.hit.id); const hp=floorHit([g.x0,g.y0],elevOf(P.cur)+(it.elev||0)); if(hp){ g.type='item'; g.id=it.id; g.off=[it.x-hp.x,it.y-hp.z]; g.ix=it.x; g.iy=it.y; g.ie=it.elev||0; g.riders=ridersOf(it).map(o=>({id:o.id,x:o.x,y:o.y,elev:o.elev||0})); if(!(SEL&&SEL.id===it.id)) select({kind:'item',id:it.id}); } else g.type='orbit'; }
     else if(g.hit&&g.hit.kind==='shape'&&TOOL==='select'){ const s=getShape(g.hit.id); if(!(SEL&&SEL.id===s.id)) select({kind:'shape',id:s.id});
-      if(g.hit.top){ g.type='push'; g.id=s.id; g.h0=s.h; } else { const hp=floorHit([g.x0,g.y0],elevOf(P.cur)); if(hp){ g.type='smove3'; g.id=s.id; g.hp0=hp; g.pts0=deep(s.pts); } else g.type='orbit'; } }
+      if(g.hit.top&&!s.sweep){ g.type='push'; g.id=s.id; g.h0=s.h; } else { const hp=floorHit([g.x0,g.y0],elevOf(P.cur)); if(hp){ g.type='smove3'; g.id=s.id; g.hp0=hp; g.src=deep({pts:s.pts,hole:s.hole}); } else g.type='orbit'; } }
     else g.type='orbit'; }
   const dx=p[0]-g.lx, dy=p[1]-g.ly; g.lx=p[0]; g.ly=p[1];
   if(g.type==='orbit'){ CAM.yaw-=dx*0.006; CAM.pitch=clamp(CAM.pitch+dy*0.005,0.08,1.53); applyCam(); }
   else if(g.type==='pan') pan3(dx,dy);
   else if(g.type==='look'){ WK.yaw+=dx*0.005; WK.pitch=clamp(WK.pitch+dy*0.004,-1.2,1.2); applyCam(); }
-  else if(g.type==='item'){ const it=getItem(g.id); const hp=floorHit(p,elevOf(P.cur)+(it.elev||0)); if(it&&hp){ it.x=hp.x+g.off[0]; it.y=hp.z+g.off[1]; snapItem(it); g.moved=true; live(); } }
+  else if(g.type==='item'){ const it=getItem(g.id); if(it){ const st=canStack(it)?stackHit(p,it):null;
+      if(st){ it.x=rd(st.x); it.y=rd(st.y); it.elev=st.h; it.on=st.id; }
+      else { if(it.on){ delete it.on; it.elev=0; } const hp=floorHit(p,elevOf(P.cur)+(it.elev||0)); if(hp){ it.x=hp.x+g.off[0]; it.y=hp.z+g.off[1]; snapItem(it); } }
+      moveRiders(g,it); g.moved=true; live(); } }
+  else if(g.type==='multi3'){ const hp=floorHit(p,elevOf(P.cur)); if(hp) moveMulti(g,snapv(hp.x-g.hp0.x,0.01),snapv(hp.z-g.hp0.z,0.01)); }
   else if(g.type==='push'){ const s=getShape(g.id); if(s){ s.h=rd(Math.max(0.02,snapv(g.h0+(g.y0-p[1])*CAM.dist*0.0022,0.01))); g.moved=true; live(); toast('สูง '+cm(s.h)+' ซม.'); } }
-  else if(g.type==='smove3'){ const s=getShape(g.id), hp=floorHit(p,elevOf(P.cur)); if(s&&hp){ const dx=snapv(hp.x-g.hp0.x,0.01), dz=snapv(hp.z-g.hp0.z,0.01); s.pts=g.pts0.map(q=>[rd(q[0]+dx),rd(q[1]+dz)]); g.moved=true; live(); } }
+  else if(g.type==='smove3'){ const s=getShape(g.id), hp=floorHit(p,elevOf(P.cur)); if(s&&hp){ const dx=snapv(hp.x-g.hp0.x,0.01), dz=snapv(hp.z-g.hp0.z,0.01); xfShape(s,g.src,q=>[rd(q[0]+dx),rd(q[1]+dz)]); g.moved=true; live(); } }
 });
-function end3(){ const g=G3.g; G3.g=null; if(g&&['item','push','smove3'].includes(g.type)&&g.moved){ updateFab(); commit(); } }
+function end3(){ const g=G3.g; G3.g=null; if(g&&['item','push','smove3','multi3','sculpt'].includes(g.type)&&g.moved){ updateFab(); commit(); } }
 function up3(e){ if(!G3.ptrs[e.pointerId]) return; delete G3.ptrs[e.pointerId]; const g=G3.g; if(!g) return; const left=Object.keys(G3.ptrs).length;
   if(g.type==='pinch'||g.type==='dead'){ G3.g=left?{type:'dead'}:null; return; }
-  if(g.type==='pending'){ G3.g=null; if(g.btn===0){ const h=g.hit; if(!h) select(null); else select({kind:h.kind,id:h.id}); } return; }
+  if(g.type==='pending'){ G3.g=null; if(g.btn===0){ const h=g.hit; if(TOOL==='multi'&&h&&(h.kind==='item'||h.kind==='shape')) toggleMulti(h.kind,h.id); else if(!h) select(null); else selectHit(h); } return; }
   end3(); }
 cv3.addEventListener('pointerup',up3); cv3.addEventListener('pointercancel',up3);
 cv3.addEventListener('wheel',e=>{ if(!R3.ok) return; e.preventDefault(); const k=Math.exp(e.deltaY*(e.deltaMode===1?0.05:0.0012)); if(WK.on){ const s=-(e.deltaY>0?1:-1)*0.25; WK.x+=-Math.sin(WK.yaw)*s; WK.z+=-Math.cos(WK.yaw)*s; applyCam(); return; } CAM.dist=clamp(CAM.dist*k,1.2,80); applyCam(); },{passive:false});
@@ -2119,7 +2494,7 @@ function stepWalk(dt){
   if(k.w||k.arrowup) f+=1; if(k.s||k.arrowdown) f-=1; if(k.a) s-=1; if(k.d) s+=1; if(k.arrowleft) turn+=1; if(k.arrowright) turn-=1;
   f-=WK.joy[1]; s+=WK.joy[0]; if(!f&&!s&&!turn) return false;
   WK.yaw+=turn*1.6*dt; const sp=1.5*dt, fx=-Math.sin(WK.yaw), fz=-Math.cos(WK.yaw), rx=Math.cos(WK.yaw), rz=-Math.sin(WK.yaw);
-  WK.x+=(fx*f+rx*s)*sp; WK.z+=(fz*f+rz*s)*sp; applyCam(); return true;
+  WK.x+=(fx*f+rx*s)*sp; WK.z+=(fz*f+rz*s)*sp; if(P.terrain&&P.cur===0) WK.eye=(roomAt(WK.x,WK.z)?0:terrainAt(WK.x,WK.z))+1.55; applyCam(); return true;
 }
 (function joystick(){
   const j=$('joy'), kn=$('knob'); let id=null;
@@ -2138,7 +2513,7 @@ function renderThumb(k){
   const mx=Math.max(c.w,c.d), px=256/mx, W=Math.max(8,Math.round(c.w*px)), H=Math.max(8,Math.round(c.d*px));
   const g=new T.Group(); c.make(g,{type,color:color||undefined}); R3.tScene.add(g);
   const cam=R3.tCam; cam.left=-c.w/2; cam.right=c.w/2; cam.top=c.d/2; cam.bottom=-c.d/2; cam.near=0.01; cam.far=c.h+4; cam.position.set(0,c.h+2,0); cam.up.set(0,0,-1); cam.lookAt(0,0,0); cam.updateProjectionMatrix();
-  const r=R3.renderer; R3.rt.setSize(W,H); r.setRenderTarget(R3.rt); r.setClearColor(0x000000,0); r.clear(); r.render(R3.tScene,cam);
+  const r=R3.renderer, lc=r.localClippingEnabled; r.localClippingEnabled=false; R3.rt.setSize(W,H); r.setRenderTarget(R3.rt); r.setClearColor(0x000000,0); r.clear(); r.render(R3.tScene,cam); r.localClippingEnabled=lc;
   const buf=new Uint8Array(W*H*4); r.readRenderTargetPixels(R3.rt,0,0,W,H,buf); r.setRenderTarget(null);
   R3.tScene.remove(g); disposeTree(g);
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d'); const img=x.createImageData(W,H);
@@ -2175,6 +2550,14 @@ function arrHtml(){ return `<h3>ทำซ้ำเป็นแถว</h3><div cl
 function pgEdit(){
   const o=selObj();
   if(!o) return `<p class="empty">แตะของ ห้อง ประตู หรือหน้าต่างบนแปลนเพื่อแก้ไข</p>`;
+  if(SEL.kind==='multi'){ const n=o.items.length+o.shapes.length, gr=SEL.grp&&getGroup(SEL.grp), names=[...o.items.map(nameOf),...o.shapes.map(s=>s.name)];
+    return `${gr?`<input id="g-name" class="in-name" type="text" value="${esc(gr.name)}" aria-label="ชื่อกลุ่ม">`:`<div class="ttl">เลือกไว้ ${n} ชิ้น</div>`}
+    <p class="muted small" style="margin:8px 0 0">${gr?`กลุ่มนี้มี ${n} ชิ้น · ลากชิ้นไหนก็ได้เพื่อย้ายทั้งกลุ่ม · แตะชิ้นในกลุ่มซ้ำเพื่อแก้ชิ้นเดียว`:'ลากชิ้นที่เลือกเพื่อย้ายไปพร้อมกัน · กด "จับกลุ่ม" ให้ติดกันไปตลอด'}</p>
+    <p class="small" style="margin:8px 0 0">${esc(names.slice(0,12).join(' · '))}${names.length>12?' …':''}</p>
+    <div class="btnrow">${gr?`<button type="button" class="btn" data-act="ungroup">${ic('group',16)}แยกกลุ่ม</button>`:`<button type="button" class="btn pri" data-act="group">${ic('group',16)}จับกลุ่ม</button>`}<button type="button" class="btn" data-act="rotR">${ic('rotr',16)}หมุน 90°</button></div>
+    ${arrHtml()}
+    <div class="btnrow sep"><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบทั้ง ${n} ชิ้น</button></div>
+    <p class="muted small" style="margin:10px 0 0">คอม: Shift+คลิกเพื่อเลือกเพิ่ม · Ctrl+G จับกลุ่ม · ลูกศรขยับ 1 ซม.</p>`; }
   if(SEL.kind==='dim'){ const L=Math.hypot(o.b[0]-o.a[0],o.b[1]-o.a[1]);
     return `<div class="ttl">เส้นวัดระยะ</div>
     <div class="kv"><span>ยาว</span><b>${f2(L)} ม. (${cm(L)} ซม.)</b></div>
@@ -2186,6 +2569,10 @@ function pgEdit(){
     <input id="l-text" class="in-name" type="text" value="${esc(o.text)}" aria-label="ข้อความ" style="margin-top:8px">
     <h3>ขนาด</h3><div class="seg sm">${LABEL_SIZES.map(([v,t])=>`<button type="button" data-act="lsize" data-v="${v}" aria-pressed="${Math.abs(o.size-v)<0.001}">${t}</button>`).join('')}</div>
     <h3>สี</h3><div class="sw">${swatches(LABEL_COLORS,o.color,'lcol')}</div>
+    <h3>ตัวหนังสือ 3D</h3><label class="chk"><input type="checkbox" id="l-3d" ${o.d3?'checked':''}> ทำเป็นตัวหนังสือ 3D (เห็นในภาพ 3D)</label>
+    ${o.d3?`<div class="seg sm" style="margin:4px 0 8px">${[['1','ตั้งขึ้น (ป้าย)'],['0','วางนอนบนพื้น']].map(([k,t])=>`<button type="button" data-act="lup" data-v="${k}" aria-pressed="${(o.up?'1':'0')===k}">${t}</button>`).join('')}</div>
+    <div class="f3"><label class="f" for="l-size">สูงตัวอักษร (ซม.)<input id="l-size" type="number" inputmode="numeric" min="5" value="${cm(o.size)}"></label><label class="f" for="l-d3">หนา (ซม.)<input id="l-d3" type="number" inputmode="numeric" min="1" value="${cm(o.d3)}"></label><label class="f" for="l-elev">สูงจากพื้น<input id="l-elev" type="number" inputmode="numeric" min="0" value="${cm(o.elev||0)}"></label></div>`:''}
+    <div class="f3" style="margin-top:8px"><label class="f" for="l-rot">หมุน (องศา)<input id="l-rot" type="number" inputmode="numeric" step="15" value="${Math.round(o.rot||0)}"></label></div>
     <div class="btnrow sep"><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
   if(SEL.kind==='bg') return `<div class="ttl">รูปแปลนพื้นหลัง (${esc(curFloor().name)})</div>
     <p class="muted small" style="margin:6px 0 0">รูปนี้เก็บไว้ในเครื่องนี้เท่านั้น ใช้ลอกลายวาดห้องทับ</p>
@@ -2194,6 +2581,8 @@ function pgEdit(){
     <p class="muted small" style="margin:8px 0 0">ให้ขนาดตรงจริง: ใช้ "วัดระยะ" วัดเส้นในรูปที่รู้ความยาว แล้วแตะเส้นนั้นกด "ตั้งสเกลรูปจากเส้นนี้"</p>
     <label class="chk" style="margin-top:6px"><input type="checkbox" id="bg-lock" ${o.lock?'checked':''}> ล็อกรูป (ลากย้ายไม่ได้)</label>
     <label class="chk"><input type="checkbox" id="bg-hide" ${o.hide?'checked':''}> ซ่อนรูป</label>
+    <h3>ลอกผนังอัตโนมัติ (ทดลอง)</h3><p class="muted small" style="margin:0 0 6px">แอปหาเส้นผนังสีเข้มในรูปแล้วสร้างห้องให้ ทำในเครื่องนี้ ไม่ส่งรูปไปไหน · ตั้งสเกลรูปก่อนจะได้ขนาดตรง</p>
+    <div class="btnrow" style="margin-top:0"><button type="button" class="btn pri" data-act="trace">${ic('room',16)}ลอกผนังจากรูป</button></div>
     <div class="btnrow sep"><button type="button" class="btn" data-act="bgPick">${ic('image',16)}เปลี่ยนรูป</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบรูป</button></div>`;
   if(SEL.kind==='wire'){
     const fl=curFloor(), n=wireDrops(o,fl).filter(Boolean).length;
@@ -2203,17 +2592,34 @@ function pgEdit(){
     <p class="muted small" style="margin:10px 0 0">สายวิ่งใต้ฝ้า จุดที่วางบนปลั๊ก สวิตช์ หรือหลอดไฟ จะนับสายที่ลงไปหาของนั้นให้ด้วย · ลากจุดเพื่อแก้เส้น ลากเส้นเพื่อย้าย</p>
     <div class="btnrow sep">${SEL.i!=null&&o.pts.length>2?`<button type="button" class="btn" data-act="delWPt">ลบจุดที่เลือก</button>`:''}<button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
   }
+  if(SEL.kind==='shape'&&o.sweep){ const sw=o.sweep;
+    return `<input id="s-name" class="in-name" type="text" value="${esc(o.name)}" aria-label="ชื่อรูปทรง">
+    <p class="muted small" style="margin:8px 0 0">Follow Me: รูปหน้าตัดวิ่งไปตามเส้นทาง · ใน 2D ลากจุดเพื่อแก้เส้น ลากเส้นเพื่อย้าย</p>
+    <h3>แบบสำเร็จรูป</h3><div class="btnrow" style="margin-top:0">${Object.keys(SWEEP_PRESETS).map(k=>`<button type="button" class="btn sm" data-act="spreset" data-v="${k}">${SWEEP_PRESETS[k][0]}</button>`).join('')}</div>
+    <h3>รูปหน้าตัด</h3><div class="seg sm" style="flex-wrap:wrap">${Object.keys(SWEEP_PROFS).map(k=>`<button type="button" data-act="sprof" data-v="${k}" aria-pressed="${sw.prof===k}">${SWEEP_PROFS[k]}</button>`).join('')}</div>
+    <h3>ขนาด (ซม.)</h3>
+    <div class="f3"><label class="f" for="s-sw">กว้าง<input id="s-sw" type="number" inputmode="numeric" min="1" value="${cm(sw.w)}"></label><label class="f" for="s-h">สูง<input id="s-h" type="number" inputmode="numeric" min="1" value="${cm(o.h)}"></label><label class="f" for="s-elev">ลอยจากพื้น<input id="s-elev" type="number" inputmode="numeric" min="0" value="${cm(o.elev)}"></label></div>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="s-posts" ${sw.posts?'checked':''}> มีเสาค้ำทุก 1.2 ม. (ทำราวหรือรั้ว)</label>
+    ${o.pts.length>2?`<label class="chk"><input type="checkbox" id="s-closed" ${sw.closed?'checked':''}> ต่อปลายเป็นวง</label>`:''}
+    <div class="kv"><span>ยาวรวม</span><b>${f2(planLen(sw.closed?o.pts.concat([o.pts[0]]):o.pts))} ม.</b></div>
+    <h3>วัสดุ</h3><div class="seg sm" style="margin-bottom:8px">${['plain','wood','concrete','glass'].map(k=>`<button type="button" data-act="smat" data-v="${k}" aria-pressed="${o.mat===k}">${SHAPE_MATS[k]}</button>`).join('')}</div>
+    <div class="sw">${swatches(SHAPE_COLORS,o.color,'scol')}</div>
+    <div class="btnrow sep"><button type="button" class="btn" data-act="rotR">${ic('rotr',16)}หมุน 90°</button><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
+  }
   if(SEL.kind==='shape'){
-    const b=bboxPts(o.pts), rect=isRect(o);
+    const b=bboxPts(o.pts), rect=isRect(o), ha=o.hole?Math.abs(area2(o.hole))/2:0;
     return `<input id="s-name" class="in-name" type="text" value="${esc(o.name)}" aria-label="ชื่อรูปทรง">
     <p class="muted small" style="margin:8px 0 0">ใน 3D: ลากด้านบนของรูปทรงขึ้น/ลงเพื่อดันหรือดึงความสูง ลากด้านข้างเพื่อย้าย · ใน 2D: ลากจุดมุมเพื่อเปลี่ยนรูป</p>
     <h3>ขนาด (ซม.)</h3>
     <div class="f3"><label class="f" for="s-h">สูง<input id="s-h" type="number" inputmode="numeric" min="1" value="${cm(o.h)}"></label><label class="f" for="s-elev">ลอยจากพื้น<input id="s-elev" type="number" inputmode="numeric" min="0" value="${cm(o.elev)}"></label>${rect?`<label class="f" for="s-w">กว้าง<input id="s-w" type="number" inputmode="numeric" min="1" value="${cm(b.x1-b.x0)}"></label>`:''}</div>
     ${rect?`<div class="f3" style="margin-top:8px"><label class="f" for="s-d">ยาว<input id="s-d" type="number" inputmode="numeric" min="1" value="${cm(b.y1-b.y0)}"></label></div>`:''}
-    <div class="kv"><span>พื้นที่ฐาน</span><b>${f2(Math.abs(area2(o.pts))/2)} ม²</b><span>ปริมาตร</span><b>${f2(Math.abs(area2(o.pts))/2*o.h)} ม³</b></div>
+    <div class="kv"><span>พื้นที่ฐาน</span><b>${f2(Math.abs(area2(o.pts))/2-ha)} ม²</b><span>ปริมาตร</span><b>${f2((Math.abs(area2(o.pts))/2-ha)*o.h)} ม³</b></div>
     <h3>วัสดุ</h3><div class="seg sm" style="margin-bottom:8px">${Object.keys(SHAPE_MATS).map(k=>`<button type="button" data-act="smat" data-v="${k}" aria-pressed="${o.mat===k}">${SHAPE_MATS[k]}</button>`).join('')}</div>
     <div class="sw">${swatches(SHAPE_COLORS,o.color,'scol')}</div>
     <h3>ย่อ / ขยาย (Scale)</h3><div class="seg sm">${[[0.5,'50%'],[0.9,'90%'],[1.1,'110%'],[2,'200%']].map(([v,t])=>`<button type="button" data-act="sscale" data-v="${v}">${t}</button>`).join('')}</div>
+    <h3>Offset (ขยับขอบเข้า/ออกเท่ากันทุกด้าน)</h3>
+    <div class="f3"><label class="f" for="s-off">ระยะ (ซม.)<input id="s-off" type="number" inputmode="numeric" min="1" value="${UI.offD}"></label></div>
+    <div class="btnrow"><button type="button" class="btn sm" data-act="soff" data-v="out">+ รูปทรงขอบนอก</button><button type="button" class="btn sm" data-act="soff" data-v="in">+ รูปทรงด้านใน</button>${o.hole?`<button type="button" class="btn sm" data-act="soff" data-v="fill">ปิดรูตรงกลาง</button>`:`<button type="button" class="btn sm" data-act="soff" data-v="frame">ทำเป็นกรอบ (เจาะกลาง)</button>`}</div>
     ${arrHtml()}
     <div class="btnrow sep"><button type="button" class="btn" data-act="rotR">${ic('rotr',16)}หมุน 90°</button><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>`;
   }
@@ -2225,6 +2631,10 @@ function pgEdit(){
     <div class="f3"><label class="f" for="e-w">กว้าง<input id="e-w" type="number" inputmode="numeric" min="1" value="${cm(o.w)}"></label><label class="f" for="e-d">ลึก<input id="e-d" type="number" inputmode="numeric" min="1" value="${cm(o.d)}"></label><label class="f" for="e-h">สูง<input id="e-h" type="number" inputmode="numeric" min="1" value="${cm(o.h)}"></label></div>
     <div class="f3" style="margin-top:8px"><label class="f" for="e-elev">สูงจากพื้น<input id="e-elev" type="number" inputmode="numeric" min="0" value="${cm(o.elev||0)}"></label><label class="f" for="e-rot">หมุน (องศา)<input id="e-rot" type="number" inputmode="numeric" step="15" value="${Math.round(o.rot)}"></label></div>
     <div class="btnrow"><button type="button" class="btn" data-act="rotL">${ic('rotl',16)}หมุนซ้าย</button><button type="button" class="btn" data-act="rotR">${ic('rotr',16)}หมุนขวา</button><button type="button" class="btn" data-act="size0">ขนาดเดิม</button></div>
+    ${o.on&&getItem(o.on)?(()=>{ const sp=getItem(o.on), lv=surfacesOf(sp,o); return `<h3>วางอยู่บน${esc(nameOf(sp))}</h3><div class="seg sm" style="flex-wrap:wrap">${lv.map((v,i)=>`<button type="button" data-act="level" data-v="${v}" aria-pressed="${Math.abs(v-(o.elev||0))<0.02}">${i===lv.length-1?'บนสุด':'ชั้น '+(i+1)} · ${cm(v)}</button>`).join('')}</div><div class="btnrow"><button type="button" class="btn" data-act="toFloor">วางลงพื้น</button></div>`; })():''}
+    <h3>เอียง (องศา)</h3>
+    <div class="f3"><label class="f" for="e-tx">หน้า-หลัง<input id="e-tx" type="number" inputmode="numeric" step="15" value="${Math.round(o.tx||0)}"></label><label class="f" for="e-tz">ซ้าย-ขวา<input id="e-tz" type="number" inputmode="numeric" step="15" value="${Math.round(o.tz||0)}"></label></div>
+    <div class="btnrow"><button type="button" class="btn sm" data-act="tilt" data-v="0,0">ตั้งตรง</button><button type="button" class="btn sm" data-act="tilt" data-v="-90,0">นอนหงาย</button><button type="button" class="btn sm" data-act="tilt" data-v="0,90">นอนตะแคง</button><button type="button" class="btn sm" data-act="tilt" data-v="-15,0">พิงผนัง</button></div>
     ${c.colorable?`<h3>สี</h3><div class="sw">${swatches(ITEM_COLORS,o.color,'icol',true)}</div>`:''}
     ${arrHtml()}
     <div class="btnrow sep"><button type="button" class="btn" data-act="dup">${ic('dup',16)}ทำซ้ำ</button><button type="button" class="btn danger" data-act="del">${ic('trash',16)}ลบ</button></div>
@@ -2244,7 +2654,9 @@ function pgEdit(){
     <div class="sw">${swatches(FLOOR_COLORS,o.floorColor,'fcol')}</div>
     <h3>สีผนัง</h3><div class="sw">${swatches(WALL_COLORS,o.wallColor,'wcol')}</div>
     <h3>ลายผนังทั้งห้อง</h3><div class="seg sm" style="flex-wrap:wrap">${Object.keys(WALL_PATS).map(k=>`<button type="button" data-act="wpat" data-v="${k}" aria-pressed="${(o.wallPat||'plain')===k}">${WALL_PATS[k]}</button>`).join('')}</div>
-    ${SEL.wall!=null?(()=>{ const wo=(o.walls||{})[SEL.wall]||{}; return `<h3>ทาเฉพาะผนัง ${SEL.wall+1} (ที่เลือก)</h3><div class="sw">${swatches(WALL_PAINT,wo.c||o.wallColor,'w1col')}</div><div class="seg sm" style="margin-top:8px;flex-wrap:wrap">${Object.keys(WALL_PATS).map(k=>`<button type="button" data-act="w1pat" data-v="${k}" aria-pressed="${(wo.p||o.wallPat||'plain')===k}">${WALL_PATS[k]}</button>`).join('')}</div>${wo.c||wo.p?`<div class="btnrow"><button type="button" class="btn" data-act="w1reset">ใช้แบบเดียวกับทั้งห้อง</button></div>`:''}`; })():`<p class="muted small" style="margin:6px 0 0">อยากทาสีผนังด้านเดียว: แตะ "ผนัง 1, 2, ..." ในรายการด้านบนก่อน</p>`}
+    ${SEL.wall!=null?(()=>{ const wo=(o.walls||{})[SEL.wall]||{}; return `<h3>ทาเฉพาะผนัง ${SEL.wall+1} (ที่เลือก)</h3><div class="sw">${swatches(WALL_PAINT,wo.c||o.wallColor,'w1col')}</div><div class="seg sm" style="margin-top:8px;flex-wrap:wrap">${Object.keys(WALL_PATS).map(k=>`<button type="button" data-act="w1pat" data-v="${k}" aria-pressed="${(wo.p||o.wallPat||'plain')===k}">${WALL_PATS[k]}</button>`).join('')}</div>${wo.c||wo.p?`<div class="btnrow"><button type="button" class="btn" data-act="w1reset">ใช้แบบเดียวกับทั้งห้อง</button></div>`:''}
+    <h3>ทำผนัง ${SEL.wall+1} ให้โค้ง</h3><div class="f3"><label class="f" for="r-bulge">โป่งตรงกลาง (ซม.)<input id="r-bulge" type="number" inputmode="numeric" min="5" value="${UI.bulge}"></label></div>
+    <div class="btnrow"><button type="button" class="btn" data-act="curve" data-v="1">โค้งออกนอกห้อง</button><button type="button" class="btn" data-act="curve" data-v="-1">โค้งเข้าในห้อง</button></div>`; })():`<p class="muted small" style="margin:6px 0 0">อยากทาสีผนังด้านเดียว: แตะ "ผนัง 1, 2, ..." ในรายการด้านบนก่อน</p>`}
     <div class="btnrow sep"><button type="button" class="btn" data-act="dupRoom">${ic('dup',16)}ทำซ้ำห้อง</button><button type="button" class="btn danger${UI.arm==='room'?' armed':''}" data-act="delRoom">${ic('trash',16)}${UI.arm==='room'?'แตะอีกครั้งเพื่อลบห้องและของในห้อง':'ลบห้อง'}</button></div>`;
   }
   const door=o.kind==='door';
@@ -2264,7 +2676,7 @@ function pgInfo(){
   <div class="kv"><span>รวมทุกห้อง</span><b>${f2(tA)} ม²</b><span>ว่างรวม</span><b>${f2(tF)} ม²</b><span>ของทั้งหมด</span><b>${P.items.length} ชิ้น</b></div>`:`<p class="empty">ยังไม่มีห้อง ใช้ "วาดห้อง" หรือ "ห้องสี่เหลี่ยม" ด้านข้าง</p>`}
   <div class="btnrow"><button type="button" class="btn" data-act="addRectRoom">+ ห้องสี่เหลี่ยมติดกัน</button><button type="button" class="btn" data-act="fit">${ic('fit',16)}พอดีจอ</button></div>
   <h3>รูปแปลนสำหรับลอกลาย (${esc(curFloor().name)})</h3>
-  ${BG.data?`<div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="bgEdit">${ic('image',16)}ตั้งค่ารูป</button><button type="button" class="btn" data-act="bgPick">เปลี่ยนรูป</button></div>`:`<div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="bgPick">${ic('image',16)}ใส่รูปแปลน</button></div><p class="muted small" style="margin:6px 0 0">ถ่ายรูปแปลนบ้านแล้วใส่ไว้ใต้แปลน แล้ววาดห้องทับตามรูป</p>`}
+  ${BG.data?`<div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="bgEdit">${ic('image',16)}ตั้งค่ารูป</button><button type="button" class="btn" data-act="bgPick">เปลี่ยนรูป</button><button type="button" class="btn pri" data-act="trace">${ic('room',16)}ลอกผนังจากรูป</button></div><p class="muted small" style="margin:6px 0 0">"ลอกผนังจากรูป" หาเส้นผนังสีเข้มแล้วสร้างห้องให้ (ทดลอง) ตั้งสเกลรูปก่อนจะได้ขนาดตรง</p>`:`<div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="bgPick">${ic('image',16)}ใส่รูปแปลน</button></div><p class="muted small" style="margin:6px 0 0">ถ่ายรูปแปลนบ้านแล้วใส่ไว้ใต้แปลน แล้ววาดห้องทับตามรูป</p>`}
   <h3>ชั้นของบ้าน</h3>
   <ul class="rooms">${P.floors.map((f,k)=>`<li class="flrow"><input id="fl-${k}" class="in-name" type="text" value="${esc(f.name)}" aria-label="ชื่อชั้น"><button type="button" class="btn sm${k===P.cur?' pri':''}" data-act="gofloor" data-v="${k}">${k===P.cur?'อยู่ชั้นนี้':'ไปชั้นนี้'}</button>${P.floors.length>1?`<button type="button" class="btn sm danger${UI.arm==='floor:'+k?' armed':''}" data-act="delfloor" data-v="${k}">${UI.arm==='floor:'+k?'ยืนยันลบ':'ลบ'}</button>`:''}</li>`).join('')}</ul>
   <div class="btnrow"><button type="button" class="btn" data-act="addfloor">+ เพิ่มชั้นด้านบน</button></div>
@@ -2296,6 +2708,9 @@ function pgInfo(){
   <div class="seg sm">${[0,1,2,3,4].map(n=>`<button type="button" data-act="rturb" data-v="${n}" aria-pressed="${(rf.turbines|0)===n}">${n?n+' ลูก':'ไม่มี'}</button>`).join('')}</div>
   <label class="chk" style="margin-top:6px"><input type="checkbox" id="u-gvent" ${rf.gableVent?'checked':''}> ช่องระบายหน้าจั่ว (หลังคาจั่ว)</label>
   <label class="chk"><input type="checkbox" id="u-soffit" ${rf.soffit?'checked':''}> ฝ้าชายคาระบายอากาศ</label>
+  <h3>พื้นดินสูงต่ำ (เนิน แอ่ง)</h3>
+  ${P.terrain?`<div class="btnrow" style="margin-top:0"><button type="button" class="btn pri" data-act="terrEdit">${ic('hill',16)}ปั้นพื้นดิน</button><button type="button" class="btn" data-act="terrFlat">ทำให้ราบ</button><button type="button" class="btn danger${UI.arm==='terr'?' armed':''}" data-act="terrDel">${ic('trash',16)}<span>${UI.arm==='terr'?'แตะอีกครั้งเพื่อลบพื้นดิน':'ลบพื้นดิน'}</span></button></div>`:`<div class="btnrow" style="margin-top:0"><button type="button" class="btn" data-act="terrNew">${ic('hill',16)}สร้างพื้นดินรอบบ้าน</button></div>`}
+  <p class="muted small" style="margin:6px 0 0">ในภาพ 3D ลากขึ้นเพื่อยกเนิน ลากลงเพื่อขุดแอ่ง พื้นในบ้านจะเรียบเสมอ</p>
   <h3>แดดและทิศ (เงาในภาพ 3D)</h3>
   <div class="rng"><span>เวลา <b id="sunTxt">${fmtHour(UI.sunHour)}</b></span><input id="u-sun" type="range" min="6" max="18" step="0.5" value="${UI.sunHour}" aria-label="เวลาของแดด"></div>
   <div class="btnrow"><button type="button" class="btn sm" data-act="north" data-v="-45">↺ หมุนทิศเหนือ</button><button type="button" class="btn sm" data-act="north" data-v="45">หมุนทิศเหนือ ↻</button><span class="muted small" style="align-self:center">เหนือ ${Math.round(P.north||0)}°</span></div>
@@ -2317,6 +2732,14 @@ function pgInfo(){
     <li>รูปทรง: เลือก "วงกลม" ที่แถบล่างได้ · ใส่วัสดุหญ้า น้ำ ทางเดิน กรวด ทำสนามหรือสระได้ · ของและรูปทรงทำซ้ำเป็นแถวได้ที่ "แก้ไข"</li>
     <li>ระบายอากาศ: กด "ใส่บล็อกช่องลม" หรือ "ใส่ช่องเกล็ด" แล้วแตะที่ผนัง · พัดลมดูดอากาศอยู่หมวด "ระบายอากาศ" · ลูกหมุน ช่องหน้าจั่ว ฝ้าชายคา ตั้งได้ที่หัวข้อ "ระบายอากาศ"</li>
     <li>หลังคา: เลือกจั่ว ปั้นหยา เพิงหมาแหงน หรือแบน ปรับชายคา ใส่รางน้ำ และดูโครงหลังคาได้ที่หัวข้อ "หลังคา" ด้านบน</li>
+    <li>เลือกหลายชิ้น: กด "เลือกหลายชิ้น" แล้วแตะของทีละชิ้น หรือลากตีกรอบ (คอม: Shift+คลิก) · กด "จับกลุ่ม" ให้ย้ายไปด้วยกันตลอด แตะชิ้นในกลุ่มซ้ำเพื่อแก้ชิ้นเดียว</li>
+    <li>วางของบนโต๊ะหรือชั้นวาง: ลากของไปวางบนนั้น (ใน 3D ชี้ชั้นที่ต้องการได้เลย) เลือกชั้นได้ที่ "แก้ไข" · เลือกโต๊ะไว้แล้วกดเพิ่มของ ของจะวางบนโต๊ะให้</li>
+    <li>เอียงของ: ที่ "แก้ไข" ใส่องศาเอียงหน้า-หลัง ซ้าย-ขวา หรือกด "นอนหงาย" "นอนตะแคง"</li>
+    <li>3D: "โปร่ง" มองทะลุผนัง · "ตัดดู" เลื่อนแถบผ่าดูข้างใน · "360°" ทำรูปหมุนรอบตัวจากจุดที่ยืน (กดเดินดูไปจุดที่ชอบก่อนก็ได้)</li>
+    <li>ปั้นรูปทรง: เลือก "เส้นทาง (Follow Me)" ทำราว ท่อ ขอบคันหิน บัว · แตะรูปทรงแล้วใช้ Offset ทำขอบหรือกรอบ</li>
+    <li>ผนังโค้ง: แตะห้อง แตะ "ผนัง 1, 2, ..." ในรายการ แล้วกด "โค้งออก" หรือ "โค้งเข้า"</li>
+    <li>ตัวหนังสือ 3D: กด "ข้อความ" วางข้อความ แล้วติ๊ก "ทำเป็นตัวหนังสือ 3D"</li>
+    <li>พื้นดิน: "สร้างพื้นดินรอบบ้าน" แล้วลากในภาพ 3D เพื่อยกเนินหรือขุดแอ่ง</li>
     <li>หลายชั้น: แตะ "ชั้น 1 / ชั้น 2" มุมซ้ายบนเพื่อสลับ กด "+ ชั้น" เพื่อเพิ่มชั้น (คอม: PageUp / PageDown)</li>
     <li>แอปเซฟให้เองทุกครั้งที่แก้ กด "บันทึก" เพื่อเซฟทันที · กด "PDF" ได้ไฟล์แปลน ภาพ 3D และรายการของ</li>
     <li>คีย์บอร์ด: Delete ลบ · R หมุน · Ctrl+Z ย้อน · Ctrl+D ทำซ้ำ · Ctrl+S บันทึก · ลูกศรขยับ 1 ซม.</li>
@@ -2349,15 +2772,129 @@ function updateFab(){
   if(SEL.kind==='item') h=B('rotR','rotr','หมุน')+B('dup','dup','ทำซ้ำ')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='open') h=(o.kind==='door'?B('flipOut','flip','กลับทางเปิด'):'')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='shape') h=B('rotR','rotr','หมุน')+B('dup','dup','ทำซ้ำ')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
+  else if(SEL.kind==='multi') h=B(SEL.grp?'ungroup':'group','group',SEL.grp?'แยกกลุ่ม':'จับกลุ่ม')+B('rotR','rotr','หมุน')+B('dup','dup','ทำซ้ำ')+B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='wire'||SEL.kind==='dim'||SEL.kind==='label') h=B('del','trash','ลบ','danger')+B('openEdit','edit','แก้ไข');
   else if(SEL.kind==='bg') h=B('del','trash','ลบรูป','danger')+B('openEdit','edit','ตั้งค่ารูป');
   else h=B('openEdit','edit','แก้ขนาด สี ผนัง');
   f.innerHTML=h; f.hidden=false;
 }
 
+/* ---------------- เลือกหลายชิ้น · จับกลุ่ม (แบบ SketchUp Groups) ----------------
+   SEL={kind:'multi',items:[id],shapes:[id],grp?} · ของในกลุ่มมี .grp = id กลุ่ม ชื่อกลุ่มอยู่ที่ floor.groups */
+const getGroup=id=>(curFloor().groups||[]).find(g=>g.id===id);
+const inMulti=(k,id)=>!!(SEL&&SEL.kind==='multi'&&(k==='item'?SEL.items:SEL.shapes).includes(id));
+function multiObj(){ const items=SEL.items.map(getItem).filter(Boolean), shapes=SEL.shapes.map(getShape).filter(Boolean); return items.length+shapes.length?{items,shapes}:null; }
+function groupSel(gid){ return {kind:'multi',items:P.items.filter(o=>o.grp===gid).map(o=>o.id),shapes:P.shapes.filter(o=>o.grp===gid).map(o=>o.id),grp:gid}; }
+function multiBox(m){ const pts=[]; m.items.forEach(it=>itemCorners(it).forEach(q=>pts.push(q))); m.shapes.forEach(s=>s.pts.forEach(q=>pts.push(q))); return bboxPts(pts); }
+/* แตะของที่อยู่ในกลุ่ม = เลือกทั้งกลุ่ม · แตะชิ้นเดิมซ้ำ = แก้ชิ้นเดียว */
+function selectHit(h){
+  const ob=h.kind==='item'?getItem(h.id):h.kind==='shape'?getShape(h.id):null;
+  if(ob&&ob.grp&&!(SEL&&SEL.kind==='multi'&&SEL.grp===ob.grp)&&!(SEL&&SEL.id===h.id)){ select(groupSel(ob.grp)); return; }
+  select({kind:h.kind,id:h.id});
+}
+function setMulti(items,shapes){
+  items=[...new Set(items)].filter(id=>getItem(id)); shapes=[...new Set(shapes)].filter(id=>getShape(id));
+  if(!items.length&&!shapes.length){ select(null,true); return; }
+  if(items.length+shapes.length===1){ select(items.length?{kind:'item',id:items[0]}:{kind:'shape',id:shapes[0]}); return; }
+  const m={kind:'multi',items,shapes}, g0=(getItem(items[0])||getShape(shapes[0])||{}).grp;
+  if(g0){ const gs=groupSel(g0); if(gs.items.length===items.length&&gs.shapes.length===shapes.length&&items.every(id=>gs.items.includes(id))&&shapes.every(id=>gs.shapes.includes(id))) m.grp=g0; }
+  select(m);
+}
+function curMulti(){ if(SEL&&SEL.kind==='multi') return [SEL.items.slice(),SEL.shapes.slice()]; if(SEL&&SEL.kind==='item') return [[SEL.id],[]]; if(SEL&&SEL.kind==='shape') return [[],[SEL.id]]; return [[],[]]; }
+/* เพิ่มทั้งกลุ่มเมื่อแตะชิ้นที่อยู่ในกลุ่ม */
+function withGroups(items,shapes){ const gs=new Set([...items.map(getItem),...shapes.map(getShape)].filter(o=>o&&o.grp).map(o=>o.grp)); gs.forEach(g=>{ P.items.forEach(o=>{ if(o.grp===g) items.push(o.id); }); P.shapes.forEach(o=>{ if(o.grp===g) shapes.push(o.id); }); }); return [items,shapes]; }
+function toggleMulti(k,id){
+  const ob=k==='item'?getItem(id):getShape(id); if(!ob) return; let [its,shs]=curMulti();
+  const ids=ob.grp?withGroups(k==='item'?[id]:[],k==='shape'?[id]:[]):[k==='item'?[id]:[],k==='shape'?[id]:[]];
+  const has=(k==='item'?its:shs).includes(id);
+  if(has){ its=its.filter(x=>!ids[0].includes(x)); shs=shs.filter(x=>!ids[1].includes(x)); } else { its.push(...ids[0]); shs.push(...ids[1]); }
+  setMulti(its,shs);
+}
+function addMulti(items,shapes){ const [a,b]=curMulti(); const [x,y]=withGroups(items.slice(),shapes.slice()); setMulti(a.concat(x),b.concat(y)); }
+/* กลุ่มที่เหลือไม่ถึง 2 ชิ้นจะถูกยกเลิกเอง */
+function tidyGroups(){
+  if(!P) return;
+  P.floors.forEach(f=>{ const all=f.items.concat(f.shapes), cnt={}; all.forEach(x=>{ if(x.grp) cnt[x.grp]=(cnt[x.grp]||0)+1; }); all.forEach(x=>{ if(x.grp&&cnt[x.grp]<2) delete x.grp; });
+    f.groups=(f.groups||[]).filter(g=>cnt[g.id]>=2); Object.keys(cnt).forEach(k=>{ if(cnt[k]>=2&&!f.groups.some(g=>g.id===k)) f.groups.push({id:k,name:'กลุ่ม'}); }); });
+  if(SEL&&SEL.kind==='multi'&&SEL.grp&&!getGroup(SEL.grp)) SEL.grp=null;
+}
+function startMulti(g){
+  const m=multiObj(); if(!m){ g.type='pan'; return; } g.type='multi';
+  const ids=new Set(m.items.map(x=>x.id)), extra=[]; m.items.forEach(it=>ridersOf(it).forEach(r=>{ if(!ids.has(r.id)&&!extra.includes(r)) extra.push(r); }));
+  g.its=m.items.concat(extra).map(o=>({id:o.id,x:o.x,y:o.y})); g.shs=m.shapes.map(s=>({id:s.id,src:deep({pts:s.pts,hole:s.hole})}));
+}
+function moveMulti(g,dx,dy){ g.its.forEach(r=>{ const o=getItem(r.id); if(o){ o.x=rd(r.x+dx); o.y=rd(r.y+dy); } }); g.shs.forEach(r=>{ const s=getShape(r.id); if(s) xfShape(s,r.src,q=>[rd(q[0]+dx),rd(q[1]+dy)]); }); g.moved=true; live(); }
+/* ทำสำเนาทั้งชุด (ของ+รูปทรง) เลื่อนไป dx,dy · ถ้าเป็นกลุ่มจะได้กลุ่มใหม่ */
+function copySet(m,dx,dy,grpName){
+  const ng=grpName?uid('g'):null, map={}, items=[], shapes=[];
+  m.items.forEach(it=>{ const c=deep(it); c.id=uid('i'); map[it.id]=c.id; c.x=rd(it.x+dx); c.y=rd(it.y+dy); if(ng) c.grp=ng; else delete c.grp; items.push(c); });
+  items.forEach(c=>{ if(c.on){ if(map[c.on]) c.on=map[c.on]; else delete c.on; } });
+  m.shapes.forEach(s=>{ const c=deep(s); c.id=uid('s'); xfShape(c,s,q=>[rd(q[0]+dx),rd(q[1]+dy)]); if(ng) c.grp=ng; else delete c.grp; shapes.push(c); });
+  P.items.push(...items); P.shapes.push(...shapes); if(ng) curFloor().groups.push({id:ng,name:grpName});
+  return {kind:'multi',items:items.map(o=>o.id),shapes:shapes.map(o=>o.id),grp:ng};
+}
+
+/* ---------------- วางของซ้อนบนของ (โต๊ะ ชั้นวาง ตู้) ----------------
+   it.on = id ของที่รองอยู่ข้างล่าง · ย้าย/หมุนของที่รอง ของข้างบนจะไปด้วย */
+const D2R=Math.PI/180;
+function ridersOf(it,acc){ acc=acc||[]; P.items.forEach(o=>{ if(o.on===it.id&&o!==it&&!acc.includes(o)){ acc.push(o); ridersOf(o,acc); } }); return acc; }
+function canStack(it){ const c=C[it.type]||{}; return !(c.flat||c.elec||c.ceil||c.stair||(c.elev||0)>=1.0); } /* ของติดผนัง (สูงจากพื้นตั้งแต่ 1 ม.) ไม่วางซ้อน */
+/* มุมล่างสุดของกล่องหลังเอียง (เทียบกับกึ่งกลาง): ใช้วางฐานของที่เอียงให้แตะระดับ elev พอดี */
+function tiltLow(it){
+  const H=itemH(it), tx=(it.tx||0)*D2R, tz=(it.tz||0)*D2R; if(!tx&&!tz) return -H/2;
+  const cx=Math.cos(tx), sx=Math.sin(tx), cz=Math.cos(tz), sz=Math.sin(tz); let lo=0;
+  for(const a of [-it.w/2,it.w/2]) for(const b of [-H/2,H/2]) for(const c of [-it.d/2,it.d/2]){ const y=(a*sz+b*cz)*cx-c*sx; if(y<lo) lo=y; }
+  return lo;
+}
+function moveRiders(g,it){ (g.riders||[]).forEach(r=>{ const o=getItem(r.id); if(o){ o.x=rd(r.x+it.x-g.ix); o.y=rd(r.y+it.y-g.iy); o.elev=rd(Math.max(0,r.elev+(it.elev||0)-g.ie)); } }); }
+function rotRiders(list,it,deg){ const a=deg*D2R, c=Math.cos(a), s=Math.sin(a); (list||[]).forEach(r=>{ const o=getItem(r.id); if(!o) return; o.x=rd(it.x+(r.x-it.x)*c-(r.y-it.y)*s); o.y=rd(it.y+(r.x-it.x)*s+(r.y-it.y)*c); o.rot=((r.rot+deg)%360+360)%360; }); }
+/* พื้นผิวที่หงายขึ้นของ o ใต้ตำแหน่งของ it: ยิงเส้นลงจากด้านบนใส่โมเดล 3D (ได้ทุกชั้นของชั้นวาง) */
+function surfacesOf(o,it){
+  const top=rd(topOf(o)); if(!R3.ok||!R3.items[o.id]) return [top];
+  R3.scene.updateMatrixWorld(); const ey=elevOf(P.cur), out=[], a=it.rot*D2R, c=Math.cos(a), s=Math.sin(a), ray=new T.Raycaster(), dn=new T.Vector3(0,-1,0), box=new T.Box3(), sz=new T.Vector3(), wide={}; let cTop=null;
+  [[0,0],[0.25,0.25],[-0.25,0.25],[0.25,-0.25],[-0.25,-0.25]].forEach(([u,v],si)=>{ const lx=u*it.w, ly=v*it.d, x=it.x+lx*c-ly*s, y=it.y+lx*s+ly*c; if(!inItem(o,x,y,0)) return;
+    ray.set(new T.Vector3(x,ey+top+2,y),dn); ray.intersectObject(R3.items[o.id].m,true).forEach(h=>{ if(!h.face) return; const n=h.face.normal.clone().transformDirection(h.object.matrixWorld); if(n.y<0.7) return;
+      /* นับเฉพาะแผ่นกว้าง (ชั้น โต๊ะ ที่นอน) ไม่นับหัวหนังสือหรือของชิ้นเล็กบนชั้น */
+      const uid2=h.object.uuid; if(wide[uid2]==null){ box.setFromObject(h.object).getSize(sz); wide[uid2]=sz.x>=0.12&&sz.z>=0.12; } if(!wide[uid2]) return;
+      const v2=rd(h.point.y-ey); if(v2<=(o.elev||0)+0.01) return; if(si===0&&(cTop==null||v2>cTop)) cTop=v2; if(!out.some(q=>Math.abs(q-v2)<0.05)) out.push(v2); }); });
+  const lv=out.length?out.sort((p,q)=>p-q):[top]; lv.center=cTop!=null?lv.reduce((b,q)=>Math.abs(q-cTop)<Math.abs(b-cTop)?q:b,lv[0]):lv[lv.length-1];
+  return lv;
+}
+/* ชั้นที่จะวาง: ของที่ปกติวางบนโต๊ะ (จอ ทีวี หม้อหุงข้าว) เลือกชั้นที่สูงใกล้ระดับเดิมของมัน · ของอื่นวางบนผิวที่อยู่ใต้กลางชิ้น */
+function pickLevel(it,lv){ const ce=(C[it.type]||{}).elev||0; return ce>0?lv.reduce((b,q)=>Math.abs(q-ce)<Math.abs(b-ce)?q:b,lv[0]):lv.center; }
+/* ของที่รองรับได้: ใหญ่กว่า และของที่ลากมาอยู่ในขอบเขตทั้งชิ้น */
+function supportFor(it){
+  if(!canStack(it)) return null; let best=null; const cs=itemCorners(it,0.02), mine=C[it.type]||{};
+  P.items.forEach(o=>{ if(o===it||isFlat(o)||isElec(o)||isStair(o)||ridersOf(it).includes(o)) return; const oc=C[o.type]||{}; if((mine.tuck&&oc.table)||oc.ceil) return;
+    if(it.w*it.d>o.w*o.d) return; if(!cs.every(q=>inItem(o,q[0],q[1],0.03))) return; if(!best||topOf(o)>topOf(best)) best=o; });
+  return best;
+}
+function dropOn(it){
+  const sp=supportFor(it);
+  if(sp){ const lv=surfacesOf(sp,it), keep=it.on===sp.id&&lv.some(v=>Math.abs(v-(it.elev||0))<0.02); if(!keep){ it.elev=pickLevel(it,lv); toast('วางบน'+nameOf(sp)+'แล้ว · เลือกชั้นได้ที่ "แก้ไข"'); } it.on=sp.id; return; }
+  if(it.on){ delete it.on; it.elev=0; }
+}
+/* 3D: ชี้ไปที่ผิวด้านบนของของชิ้นอื่น (ข้ามของที่กำลังลากและของที่วางอยู่บนมัน) */
+function stackHit(p,it){
+  R3.ray.setFromCamera(ndc(p),R3.cam); R3.scene.updateMatrixWorld(); const skip=new Set([it.id,...ridersOf(it).map(o=>o.id)]), ey=elevOf(P.cur);
+  for(const h of R3.ray.intersectObjects(R3.itemsRoot.children,true)){
+    let o=h.object, vis=true; while(o&&!(o.userData&&o.userData.itemId)){ if(!o.visible) vis=false; o=o.parent; } if(!o||!vis||h.object.material===R3.warnMat) continue;
+    const id=o.userData.itemId; if(skip.has(id)) continue; const sp=getItem(id); if(!sp) return null;
+    const n=h.face?h.face.normal.clone().transformDirection(h.object.matrixWorld):null, oc=C[sp.type]||{};
+    if(!n||n.y<0.7||isFlat(sp)||isElec(sp)||oc.ceil||isStair(sp)) return null;
+    return {id,x:h.point.x,y:h.point.z,h:rd(h.point.y-ey)};
+  }
+  return null;
+}
+function fallRiders(o){ P.items.forEach(x=>{ if(x.on!==o.id) return; const dd=x.elev||0; ridersOf(x).forEach(y=>{ y.elev=rd(Math.max(0,(y.elev||0)-dd)); }); delete x.on; x.elev=0; }); }
+
 /* ---------------- คำสั่งจากปุ่ม ---------------- */
 function addItem(type){
   const c=C[type]; const it={id:uid('i'),type,x:0,y:0,rot:0,w:c.w,d:c.d,h:c.h,elev:c.ceil?rd(P.wallH-c.h):(c.elev||0)};
+  /* เลือกโต๊ะหรือชั้นวางไว้ก่อน แล้วกดเพิ่มของ = วางบนนั้นเลย */
+  const sup=SEL&&SEL.kind==='item'?getItem(SEL.id):null;
+  if(sup&&canStack(it)&&!isFlat(sup)&&!isElec(sup)&&!isStair(sup)&&!(c.tuck&&(C[sup.type]||{}).table)&&it.w*it.d<=sup.w*sup.d){ it.x=sup.x; it.y=sup.y; it.rot=sup.rot;
+    if(itemCorners(it,0.02).every(q=>inItem(sup,q[0],q[1],0.03))){ const lv=surfacesOf(sup,it); it.elev=pickLevel(it,lv); it.on=sup.id; P.items.push(it); select({kind:'item',id:it.id},true); commit(); toast('วาง '+c.name+' บน'+nameOf(sup)+'แล้ว · เลือกชั้นได้ที่ "แก้ไข"'); return; } }
   let cx, cy; if(UI.view==='3d'&&R3.ok){ cx=CAM.tx; cy=CAM.tz; } else { const w=s2w(W2/2,H2/2); cx=w[0]; cy=w[1]; }
   const dist=r=>{ const lp=labelPoint(r.pts); return Math.hypot(lp[0]-cx,lp[1]-cy); };
   const tries=[roomAt(cx,cy),SEL&&SEL.kind==='room'?getRoom(SEL.id):null,...P.rooms.slice().sort((a,b)=>dist(a)-dist(b))].filter((r,i,a)=>r&&a.indexOf(r)===i);
@@ -2375,7 +2912,8 @@ function findSpot(it,room,cx,cy){
 }
 function delSel(){
   const o=selObj(); if(!o) return;
-  if(SEL.kind==='item') P.items=P.items.filter(x=>x!==o);
+  if(SEL.kind==='item'){ fallRiders(o); P.items=P.items.filter(x=>x!==o); }
+  else if(SEL.kind==='multi'){ const ids=new Set(o.items.map(x=>x.id)), sids=new Set(o.shapes.map(x=>x.id)); o.items.forEach(x=>{ if(P.items.some(y=>y.on===x.id&&!ids.has(y.id))) fallRiders(x); }); P.items=P.items.filter(x=>!ids.has(x.id)); P.shapes=P.shapes.filter(x=>!sids.has(x.id)); }
   else if(SEL.kind==='open') P.openings=P.openings.filter(x=>x!==o);
   else if(SEL.kind==='shape') P.shapes=P.shapes.filter(x=>x!==o);
   else if(SEL.kind==='wire') P.wires=P.wires.filter(x=>x!==o);
@@ -2387,16 +2925,20 @@ function delSel(){
 }
 function dupSel(){
   const o=selObj(); if(!o) return;
-  if(SEL.kind==='item'){ const c=deep(o); c.id=uid('i'); c.x=rd(o.x+0.15); c.y=rd(o.y+0.15); P.items.push(c); select({kind:'item',id:c.id},true); commit(); }
+  if(SEL.kind==='item'){ const c=deep(o); c.id=uid('i'); c.x=rd(o.x+0.15); c.y=rd(o.y+0.15); delete c.grp; P.items.push(c); const map={[o.id]:c.id}; ridersOf(o).forEach(r=>{ const y=deep(r); y.id=uid('i'); map[r.id]=y.id; y.x=rd(r.x+0.15); y.y=rd(r.y+0.15); delete y.grp; y.on=map[r.on]; P.items.push(y); }); select({kind:'item',id:c.id},true); commit(); }
+  else if(SEL.kind==='multi'){ const gr=SEL.grp&&getGroup(SEL.grp); select(copySet(o,0.3,0.3,gr?gr.name:null),true); commit(); toast('ทำซ้ำ '+(o.items.length+o.shapes.length)+' ชิ้นแล้ว'); }
   else if(SEL.kind==='room') act('dupRoom',{dataset:{}});
-  else if(SEL.kind==='shape'){ const c=deep(o); c.id=uid('s'); c.name=o.name+' (สำเนา)'; c.pts=o.pts.map(q=>[rd(q[0]+0.2),rd(q[1]+0.2)]); P.shapes.push(c); select({kind:'shape',id:c.id},true); commit(); }
+  else if(SEL.kind==='shape'){ const c=deep(o); c.id=uid('s'); c.name=o.name+' (สำเนา)'; delete c.grp; xfShape(c,o,q=>[rd(q[0]+0.2),rd(q[1]+0.2)]); P.shapes.push(c); select({kind:'shape',id:c.id},true); commit(); }
   else if(SEL.kind==='label'){ const c=deep(o); c.id=uid('t'); c.x=rd(o.x+0.3); c.y=rd(o.y+0.3); P.labels.push(c); select({kind:'label',id:c.id},true); commit(); }
   else if(SEL.kind==='wire'){ const c=deep(o); c.id=uid('w'); c.pts=o.pts.map(q=>[rd(q[0]+0.2),rd(q[1]+0.2)]); P.wires.push(c); select({kind:'wire',id:c.id},true); commit(); }
 }
 function rotSel(d){
   const o=selObj(); if(!o) return;
-  if(SEL.kind==='shape'){ const b=bboxPts(o.pts), cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, sg=d>0?1:-1; o.pts=o.pts.map(q=>[rd(cx-sg*(q[1]-cy)),rd(cy+sg*(q[0]-cx))]); commit(); return; }
-  if(SEL.kind!=='item') return; o.rot=((o.rot+d)%360+360)%360; commit();
+  if(SEL.kind==='shape'){ const b=bboxPts(o.pts), cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, sg=d>0?1:-1; xfShape(o,o,q=>[rd(cx-sg*(q[1]-cy)),rd(cy+sg*(q[0]-cx))]); commit(); return; }
+  if(SEL.kind==='multi'){ const b=multiBox(o), cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, sg=d>0?1:-1, f=q=>[rd(cx-sg*(q[1]-cy)),rd(cy+sg*(q[0]-cx))], ids=new Set(o.items.map(x=>x.id)), all=o.items.slice();
+    o.items.forEach(it=>ridersOf(it).forEach(r=>{ if(!ids.has(r.id)&&!all.includes(r)) all.push(r); }));
+    all.forEach(it=>{ const q=f([it.x,it.y]); it.x=q[0]; it.y=q[1]; it.rot=((it.rot+d)%360+360)%360; }); o.shapes.forEach(s=>xfShape(s,s,f)); commit(); return; }
+  if(SEL.kind!=='item') return; const rs=ridersOf(o).map(r=>({id:r.id,x:r.x,y:r.y,rot:r.rot})); o.rot=((o.rot+d)%360+360)%360; rotRiders(rs,o,d); commit();
 }
 function armOnce(kind,el,label){ if(UI.arm===kind) return true; UI.arm=kind; if(el&&el.classList){ el.classList.add('armed'); el.lastChild.textContent=label; } clearTimeout(armOnce.t); armOnce.t=setTimeout(()=>{ if(UI.arm===kind){ UI.arm=null; if(UI.tab==='edit') renderPanel(); } },3500); return false; }
 function act(a,el){
@@ -2419,7 +2961,7 @@ function act(a,el){
     case 'floor': if(o&&SEL.kind==='room'){ o.floor=v; if(v==='grass'&&!['#6aa84f','#4f8a3a'].includes(o.floorColor)) o.floorColor='#6aa84f'; else if(v!=='grass'&&['#6aa84f','#4f8a3a'].includes(o.floorColor)) o.floorColor=FLOOR_COLORS[0]; commit(); } break;
     case 'fcol': if(o&&SEL.kind==='room'){ o.floorColor=v; commit(); } break;
     case 'wcol': if(o&&SEL.kind==='room'){ o.wallColor=v; commit(); } break;
-    case 'dupRoom': if(o&&SEL.kind==='room'){ const b=bboxPts(P.rooms.flatMap(r=>r.pts)), rb=bboxPts(o.pts), dx=rd(b.x1+P.wallT-rb.x0); const r=deep(o); r.id=uid('r'); r.name=o.name+' (สำเนา)'; r.pts=o.pts.map(q=>[rd(q[0]+dx),q[1]]); P.rooms.push(r); P.openings.filter(x=>x.room===o.id).forEach(x=>{ const y=deep(x); y.id=uid('o'); y.room=r.id; P.openings.push(y); }); P.items.filter(it=>pip(it.x,it.y,o.pts)).forEach(it=>{ const y=deep(it); y.id=uid('i'); y.x=rd(it.x+dx); P.items.push(y); }); select({kind:'room',id:r.id}); commit(); fit2d(); } break;
+    case 'dupRoom': if(o&&SEL.kind==='room'){ const b=bboxPts(P.rooms.flatMap(r=>r.pts)), rb=bboxPts(o.pts), dx=rd(b.x1+P.wallT-rb.x0); const r=deep(o); r.id=uid('r'); r.name=o.name+' (สำเนา)'; r.pts=o.pts.map(q=>[rd(q[0]+dx),q[1]]); P.rooms.push(r); P.openings.filter(x=>x.room===o.id).forEach(x=>{ const y=deep(x); y.id=uid('o'); y.room=r.id; P.openings.push(y); }); const im={}, ni=[]; P.items.filter(it=>pip(it.x,it.y,o.pts)).forEach(it=>{ const y=deep(it); y.id=uid('i'); im[it.id]=y.id; y.x=rd(it.x+dx); delete y.grp; ni.push(y); }); ni.forEach(y=>{ if(y.on){ if(im[y.on]) y.on=im[y.on]; else delete y.on; } }); P.items.push(...ni); select({kind:'room',id:r.id}); commit(); fit2d(); } break;
     case 'delRoom': if(o&&SEL.kind==='room'){ if(!armOnce('room',el,'แตะอีกครั้งเพื่อลบห้องและของในห้อง')) break; UI.arm=null; P.items=P.items.filter(it=>!pip(it.x,it.y,o.pts)); P.openings=P.openings.filter(x=>x.room!==o.id); P.rooms=P.rooms.filter(r=>r!==o); select(null,true); commit(); toast('ลบห้องแล้ว กดย้อนกลับได้ถ้าเผลอลบ'); } break;
     case 'flipOut': if(o&&SEL.kind==='open'){ o.out=!o.out; commit(); updateFab(); } break;
     case 'flipHinge': if(o&&SEL.kind==='open'){ o.hinge=o.hinge?0:1; commit(); } break;
@@ -2443,11 +2985,31 @@ function act(a,el){
     case 'wkind': if(o&&SEL.kind==='wire'){ o.c=v; UI.wireKind=v; commit(); } break;
     case 'delWPt': if(o&&SEL.kind==='wire'&&SEL.i!=null&&o.pts.length>2){ o.pts.splice(SEL.i,1); SEL.i=null; commit(); } break;
     case 'elecCat': UI.cat='elec'; UI.q=''; setTab('add',true); break;
-    case 'sscale': if(o&&SEL.kind==='shape'){ const b=bboxPts(o.pts), cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, k=+v; o.pts=o.pts.map(q=>[rd(cx+(q[0]-cx)*k),rd(cy+(q[1]-cy)*k)]); commit(); } break;
-    case 'arr': if(o&&(SEL.kind==='item'||SEL.kind==='shape')){ const nC=clamp(Math.round(UI.arrN)||1,1,30), gap=Math.max(0,UI.arrGap)/100, dx=v==='r'?1:v==='l'?-1:0, dy=v==='d'?1:v==='u'?-1:0;
-      if(SEL.kind==='item'){ const e=ext(o), st=(dx?e[0]:e[1])+gap; for(let i=1;i<=nC;i++){ const c=deep(o); c.id=uid('i'); c.x=rd(o.x+dx*st*i); c.y=rd(o.y+dy*st*i); P.items.push(c); } }
-      else { const b=bboxPts(o.pts), st=(dx?b.x1-b.x0:b.y1-b.y0)+gap; for(let i=1;i<=nC;i++){ const c=deep(o); c.id=uid('s'); c.name=o.name+' '+(i+1); c.pts=o.pts.map(q=>[rd(q[0]+dx*st*i),rd(q[1]+dy*st*i)]); P.shapes.push(c); } }
-      commit(); toast('ทำซ้ำเพิ่ม '+nC+' ชิ้น ห่างกัน '+cm(gap)+' ซม.'); } break;
+    case 'sscale': if(o&&SEL.kind==='shape'){ const b=bboxPts(o.pts), cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, k=+v; xfShape(o,o,q=>[rd(cx+(q[0]-cx)*k),rd(cy+(q[1]-cy)*k)]); commit(); } break;
+    case 'arr': if(o&&(SEL.kind==='item'||SEL.kind==='shape'||SEL.kind==='multi')){ const nC=clamp(Math.round(UI.arrN)||1,1,30), gap=Math.max(0,UI.arrGap)/100, dx=v==='r'?1:v==='l'?-1:0, dy=v==='d'?1:v==='u'?-1:0;
+      if(SEL.kind==='item'){ const e=ext(o), st=(dx?e[0]:e[1])+gap; for(let i=1;i<=nC;i++){ const c=deep(o); c.id=uid('i'); c.x=rd(o.x+dx*st*i); c.y=rd(o.y+dy*st*i); delete c.grp; delete c.on; P.items.push(c); } }
+      else if(SEL.kind==='multi'){ const b=multiBox(o), st=(dx?b.x1-b.x0:b.y1-b.y0)+gap, gr=SEL.grp&&getGroup(SEL.grp); for(let i=1;i<=nC;i++) copySet(o,dx*st*i,dy*st*i,gr?gr.name+' '+(i+1):null); }
+      else { const b=bboxPts(o.pts), st=(dx?b.x1-b.x0:b.y1-b.y0)+gap; for(let i=1;i<=nC;i++){ const c=deep(o); c.id=uid('s'); c.name=o.name+' '+(i+1); delete c.grp; xfShape(c,o,q=>[rd(q[0]+dx*st*i),rd(q[1]+dy*st*i)]); P.shapes.push(c); } }
+      commit(); toast('ทำซ้ำเพิ่ม '+nC+(SEL.kind==='multi'?' ชุด':' ชิ้น')+' ห่างกัน '+cm(gap)+' ซม.'); } break;
+    case 'group': if(o&&SEL.kind==='multi'){ const id=uid('g'), fl=curFloor(); fl.groups=fl.groups||[]; const nm='กลุ่ม '+(fl.groups.length+1); o.items.concat(o.shapes).forEach(x=>{ x.grp=id; }); fl.groups.push({id,name:nm}); SEL.grp=id; commit(); updateFab(); toast('จับกลุ่มแล้ว · แตะชิ้นไหนก็เลือกทั้งกลุ่ม แตะซ้ำเพื่อแก้ชิ้นเดียว'); } break;
+    case 'ungroup': if(o&&SEL.kind==='multi'&&SEL.grp){ o.items.concat(o.shapes).forEach(x=>{ delete x.grp; }); SEL.grp=null; commit(); updateFab(); toast('แยกกลุ่มแล้ว'); } break;
+    case 'tilt': if(o&&SEL.kind==='item'){ const [a,b]=v.split(',').map(Number); if(a) o.tx=a; else delete o.tx; if(b) o.tz=b; else delete o.tz; commit(); } break;
+    case 'level': if(o&&SEL.kind==='item'){ const g={ix:o.x,iy:o.y,ie:o.elev||0,riders:ridersOf(o).map(r=>({id:r.id,x:r.x,y:r.y,elev:r.elev||0}))}; o.elev=+v; moveRiders(g,o); commit(); } break;
+    case 'toFloor': if(o&&SEL.kind==='item'){ const g={ix:o.x,iy:o.y,ie:o.elev||0,riders:ridersOf(o).map(r=>({id:r.id,x:r.x,y:r.y,elev:r.elev||0}))}; delete o.on; o.elev=0; moveRiders(g,o); commit(); } break;
+    case 'soff': if(o&&SEL.kind==='shape'&&!o.sweep){ const d=Math.max(0.5,Math.abs(UI.offD))/100;
+      if(v==='fill'){ delete o.hole; commit(); break; }
+      const res=offsetPts(o.pts,v==='out'?d:-d); if(!res){ toast('ระยะมากเกินไปสำหรับรูปทรงนี้'); break; }
+      if(v==='frame'){ o.hole=res; commit(); toast('ทำเป็นกรอบแล้ว ขอบหนา '+cm(d)+' ซม.'); break; }
+      const c=deep(o); c.id=uid('s'); c.name=o.name+(v==='out'?' ขอบนอก':' ด้านใน'); c.pts=res; delete c.hole; delete c.grp; P.shapes.push(c); select({kind:'shape',id:c.id},true); commit(); toast('ได้รูปทรงใหม่ '+(v==='out'?'ใหญ่ขึ้น':'เล็กลง')+' '+cm(d)+' ซม. ทุกด้าน'); } break;
+    case 'sprof': if(o&&SEL.kind==='shape'&&o.sweep){ o.sweep.prof=v; commit(); } break;
+    case 'spreset': if(o&&SEL.kind==='shape'&&o.sweep&&SWEEP_PRESETS[v]){ const p=SWEEP_PRESETS[v]; Object.assign(o.sweep,p[1]); o.h=p[2]; o.elev=p[3]; o.color=p[4]; o.mat=p[5]; if(/^Follow Me/.test(o.name)) o.name=p[0]; commit(); } break;
+    case 'curve': if(o&&SEL.kind==='room'&&SEL.wall!=null){ if(curveWall(o,SEL.wall,(+v)*Math.abs(UI.bulge)/100)){ SEL.wall=null; SEL.corner=null; commit(); toast('ทำผนังโค้งแล้ว · กดย้อนกลับถ้ายังไม่ชอบ'); } else toast('ผนังสั้นไปหรือโค้งน้อยไป'); } break;
+    case 'lup': if(o&&SEL.kind==='label'){ o.up=v==='1'; commit(); } break;
+    case 'trace': traceWalls(); break;
+    case 'terrNew': if(!P.terrain){ P.terrain=newTerrain(); commit(); } setTerra(true); break;
+    case 'terrEdit': setTerra(true); break;
+    case 'terrFlat': if(P.terrain){ P.terrain.h=P.terrain.h.map(()=>0); commit(); toast('ทำพื้นดินให้ราบแล้ว'); } break;
+    case 'terrDel': if(P.terrain){ if(!armOnce('terr',el,'แตะอีกครั้งเพื่อลบพื้นดิน')) break; UI.arm=null; P.terrain=null; setTerra(false); commit(); toast('ลบพื้นดินแล้ว'); } break;
     case 'north': P.north=((((P.north||0)+ +v)%360)+360)%360; commit(); placeSun(); need2=true; break;
     case 'addView': if(!R3.ok){ toast('เครื่องนี้เปิดภาพ 3D ไม่ได้'); break; } if(UI.view==='2d'){ setView(isWide()?'split':'3d'); toast('หมุนภาพ 3D ให้ได้มุมที่ชอบ แล้วกดบันทึกอีกครั้ง'); break; } P.views=P.views||[]; if(P.views.length>=12){ toast('บันทึกได้สูงสุด 12 มุม'); break; } P.views.push({id:uid('v'),name:'มุม '+(P.views.length+1),floor:P.cur,roof:UI.roof,cam:Object.assign({},CAM)}); commit(); toast('บันทึกมุมกล้องแล้ว'); break;
     case 'goView': { const vw=(P.views||[]).find(x=>x.id===v); if(!vw) break; goView(vw); break; }
@@ -2519,6 +3081,15 @@ function onField(el,final){
   if(id==='bg-w'&&BG.data){ const v=numIn(el,0.5,500); if(v!=null){ BG.data.w=v; saveBg(); need2=true; } return; }
   if((id==='bg-lock'||id==='bg-hide')&&BG.data){ BG.data[id==='bg-lock'?'lock':'hide']=el.checked; saveBg(); need2=true; return; }
   if(id==='l-text'&&o&&SEL.kind==='label'){ o.text=el.value.slice(0,80)||'ข้อความ'; need2=true; if(final) commit(); return; }
+  if(id==='g-name'&&SEL&&SEL.kind==='multi'&&SEL.grp){ const gr=getGroup(SEL.grp); if(gr){ gr.name=el.value.trim().slice(0,40)||'กลุ่ม'; need2=true; if(final) commit(); } return; }
+  if(o&&SEL.kind==='label'&&['l-3d','l-d3','l-elev','l-rot','l-size'].includes(id)){
+    if(id==='l-3d'){ if(el.checked){ o.d3=0.05; o.up=true; o.elev=o.elev||0; if(o.size<0.2) o.size=0.25; } else { delete o.d3; delete o.up; delete o.elev; } commit(); renderPanel(); if(el.checked&&UI.view==='2d'&&R3.ok) toast('ดูตัวหนังสือ 3D ได้ในภาพ 3D'); return; }
+    if(id==='l-rot'){ const v=numIn(el,-3600,3600); if(v!=null){ const r=((v%360)+360)%360; if(r) o.rot=r; else delete o.rot; live(); } }
+    else { const mp={'l-d3':['d3',0.5,100],'l-elev':['elev',0,3000],'l-size':['size',5,200]}[id], v=numIn(el,mp[1],mp[2]); if(v!=null){ o[mp[0]]=v/100; live(); } }
+    if(final) commit(); return; }
+  if(id==='s-off'){ const v=parseFloat(el.value); if(isFinite(v)&&v>0) UI.offD=v; return; }
+  if(id==='r-bulge'){ const v=parseFloat(el.value); if(isFinite(v)&&v>0) UI.bulge=v; return; }
+  if(o&&SEL.kind==='shape'&&o.sweep&&(id==='s-posts'||id==='s-closed')){ o.sweep[id==='s-posts'?'posts':'closed']=el.checked; commit(); return; }
   if(id==='d-len'&&o&&SEL.kind==='dim'){ const v=numIn(el,1,100000), L=Math.hypot(o.b[0]-o.a[0],o.b[1]-o.a[1]); if(v!=null&&L>0){ const k=v/100/L; o.b=[rd(o.a[0]+(o.b[0]-o.a[0])*k),rd(o.a[1]+(o.b[1]-o.a[1])*k)]; live(); } if(final) commit(); return; }
   if(id==='d-real') return;
   if(id==='a-n'||id==='a-gap'){ const v=parseFloat(el.value); if(isFinite(v)) UI[id==='a-n'?'arrN':'arrGap']=v; return; }
@@ -2531,11 +3102,12 @@ function onField(el,final){
   else if(id==='p-wt'){ const v=numIn(el,4,40); if(v!=null){ P.wallT=v/100; live(); } }
   else if(o&&SEL.kind==='item'){
     if(id==='e-name'){ const t=el.value.trim(); if(!t||t===C[o.type].name) delete o.name; else o.name=t.slice(0,60); need2=true; }
-    else { const map={'e-w':['w',1,2000],'e-d':['d',1,2000],'e-h':['h',1,600],'e-elev':['elev',0,500]}; if(map[id]){ const v=numIn(el,map[id][1],map[id][2]); if(v!=null){ o[map[id][0]]=v/100; live(); } } else if(id==='e-rot'){ const v=numIn(el,-3600,3600); if(v!=null){ o.rot=((v%360)+360)%360; live(); } } }
+    else { const map={'e-w':['w',1,2000],'e-d':['d',1,2000],'e-h':['h',1,600],'e-elev':['elev',0,500]}; if(map[id]){ const v=numIn(el,map[id][1],map[id][2]); if(v!=null){ o[map[id][0]]=v/100; live(); } } else if(id==='e-rot'){ const v=numIn(el,-3600,3600); if(v!=null){ o.rot=((v%360)+360)%360; live(); } } else if(id==='e-tx'||id==='e-tz'){ const v=numIn(el,-180,180), k=id==='e-tx'?'tx':'tz'; if(v!=null){ if(v) o[k]=v; else delete o[k]; live(); } } }
   } else if(o&&SEL.kind==='shape'){
     if(id==='s-name'){ o.name=el.value.slice(0,60)||'รูปทรง'; need2=true; }
     else if(id==='s-h'){ const v=numIn(el,1,3000); if(v!=null){ o.h=v/100; live(); } }
     else if(id==='s-elev'){ const v=numIn(el,0,3000); if(v!=null){ o.elev=v/100; live(); } }
+    else if(id==='s-sw'&&o.sweep){ const v=numIn(el,1,500); if(v!=null){ o.sweep.w=v/100; live(); } }
     else if((id==='s-w'||id==='s-d')&&isRect(o)){ const v=numIn(el,1,5000); if(v!=null){ const b=bboxPts(o.pts), m=v/100; o.pts=o.pts.map(q=>id==='s-w'?[Math.abs(q[0]-b.x1)<1e-6?rd(b.x0+m):q[0],q[1]]:[q[0],Math.abs(q[1]-b.y1)<1e-6?rd(b.y0+m):q[1]]); live(); } }
   } else if(o&&SEL.kind==='room'){
     if(id==='r-name'){ o.name=el.value.slice(0,60)||'ห้อง'; need2=true; }
@@ -2555,14 +3127,14 @@ side.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.matches('input
 /* ---------------- เครื่องมือ มุมมอง ---------------- */
 function setTool(t){
   if(t==='add'){ setTool('select'); setTab('add',true); return; }
-  TOOL=t; D.pts=[]; D.hover=null;
+  TOOL=t; D.pts=[]; D.hover=null; D.closed=false;
   if(t==='wire'&&!UI.wires){ UI.wires=true; savePrefs(); sync3d(); }
   if(t!=='window') UI.openNext='';
   MS.a=null; MS.hover=null;
-  HOV=null; if(t!=='select'&&SEL){ SEL=null; renderPanel(); }
+  HOV=null; if(t!=='select'&&SEL&&!(t==='multi'&&/^(item|shape|multi)$/.test(SEL.kind))){ SEL=null; renderPanel(); }
   document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t?'true':'false'));
   if(t!=='select'&&UI.view==='3d') setView(isWide()?'split':'2d');
-  let h=''; if(t==='rect') h='ลากเพื่อวาดห้องสี่เหลี่ยม หรือแตะเพื่อวางห้อง 3×3 ม.'; else if(t==='door') h='แตะที่ผนังเพื่อใส่ประตู'; else if(t==='window') h='แตะที่ผนังเพื่อใส่'+(VENTS[UI.openNext]||'หน้าต่าง'); else if(t==='measure') h='แตะจุดแรก แล้วแตะจุดที่สองเพื่อวัดระยะ'; else if(t==='text') h='แตะบนแปลนเพื่อวางข้อความ';
+  let h=''; if(t==='rect') h='ลากเพื่อวาดห้องสี่เหลี่ยม หรือแตะเพื่อวางห้อง 3×3 ม.'; else if(t==='door') h='แตะที่ผนังเพื่อใส่ประตู'; else if(t==='window') h='แตะที่ผนังเพื่อใส่'+(VENTS[UI.openNext]||'หน้าต่าง'); else if(t==='measure') h='แตะจุดแรก แล้วแตะจุดที่สองเพื่อวัดระยะ'; else if(t==='text') h='แตะบนแปลนเพื่อวางข้อความ'; else if(t==='multi') h='แตะของทีละชิ้นเพื่อเลือกเพิ่ม/เอาออก · ลากที่ว่างเพื่อตีกรอบ · ลากของที่เลือกเพื่อย้ายพร้อมกัน';
   $('hint').textContent=h; $('hint').hidden=!h; $('drawBar').hidden=!isDraw(); $('scaleBar').hidden=t!=='select';
   if(isDraw()) updDrawBar();
   cv2.style.cursor=t==='select'?'grab':'crosshair'; updateFab(); need2=true;
@@ -2594,20 +3166,36 @@ $('dbClose').addEventListener('click',finishDraw);
 $('bgIn').addEventListener('change',e=>{ const fl=e.target.files&&e.target.files[0]; e.target.value=''; if(fl) pickBgFile(fl); });
 $('dbKinds').addEventListener('click',e=>{ const b=e.target.closest('[data-wk],[data-sm]'); if(!b) return; if(b.dataset.sm){ UI.shapeMode=b.dataset.sm; D.pts=[]; need2=true; } else UI.wireKind=b.dataset.wk; updDrawBar(); });
 $('lightBtn').addEventListener('click',()=>setNight(!UI.night));
+$('xrayBtn').addEventListener('click',()=>setXray(!UI.xray));
+$('secBtn').addEventListener('click',()=>setSec(!UI.sec.on));
+$('secOff').addEventListener('click',()=>setSec(false));
+$('secFlip').addEventListener('click',()=>{ UI.sec.flip=!UI.sec.flip; updSec(); });
+$('secAx').addEventListener('click',e=>{ const b=e.target.closest('[data-ax]'); if(!b) return; UI.sec.ax=b.dataset.ax; UI.sec.t=b.dataset.ax==='y'?0.45:0.5; updSecBar(); updSec(); });
+$('secPos').addEventListener('input',e=>{ UI.sec.t=clamp(+e.target.value,0,1); updSec(); });
+$('panoBtn').addEventListener('click',()=>{ if(UI.view==='2d'&&R3.ok){ setView(isWide()?'split':'3d'); } toast('กำลังทำภาพ 360°…'); setTimeout(makePano,60); });
+$('panoClose').addEventListener('click',closePano);
+$('panoBox').addEventListener('click',e=>{ if(e.target===$('panoBox')) closePano(); });
+$('panoSave').addEventListener('click',()=>{ if(PANO) saveFile(safeName()+' 360.jpg',panoBlob(PANO.cv)); });
+$('tbMode').addEventListener('click',e=>{ const b=e.target.closest('[data-tm]'); if(!b) return; UI.tMode=b.dataset.tm; updTerraBar(); });
+$('tbSize').addEventListener('click',e=>{ const b=e.target.closest('[data-ts]'); if(!b) return; UI.tSize=+b.dataset.ts; updTerraBar(); });
+$('tbDone').addEventListener('click',()=>{ setTerra(false); if(UI.tab==='info') renderPanel(); });
 $('dbCancel').addEventListener('click',()=>setTool('select'));
 $('dbLen').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); drawTyped(); } });
 document.addEventListener('keydown',e=>{
   const tg=e.target, tag=(tg&&tg.tagName)||'';
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){ e.preventDefault(); saveNow(); return; }
   if(/INPUT|TEXTAREA|SELECT/.test(tag)){ if(e.key==='Escape') tg.blur(); return; }
+  if(!$('panoBox').hidden){ if(e.key==='Escape') closePano(); return; }
   if(UI.home){ if(e.key==='Escape') hideHome(); return; }
   const k=e.key.toLowerCase(), mod=e.ctrlKey||e.metaKey;
   if(WK.on&&UI.view!=='2d'&&['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)&&!mod){ WK.keys[k]=true; e.preventDefault(); return; }
   if(mod&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
   if(mod&&k==='y'){ e.preventDefault(); redo(); return; }
   if(mod&&k==='d'){ e.preventDefault(); dupSel(); return; }
+  if(mod&&k==='g'){ e.preventDefault(); act(e.shiftKey?'ungroup':'group'); return; }
+  if(k.startsWith('arrow')&&SEL&&SEL.kind==='multi'){ const g={}; startMulti(g); if(g.type!=='multi') return; const st=e.shiftKey?0.1:0.01; moveMulti(g,k==='arrowleft'?-st:k==='arrowright'?st:0,k==='arrowup'?-st:k==='arrowdown'?st:0); e.preventDefault(); clearTimeout(nudgeT); nudgeT=setTimeout(commit,350); return; }
   if(k==='delete'||k==='backspace'){ if(isDraw()&&D.pts.length){ D.pts.pop(); updDrawBar(); need2=true; } else delSel(); e.preventDefault(); return; }
-  if(k==='escape'){ if(TOOL!=='select') setTool('select'); else if(WK.on) setWalk(false); else select(null,true); return; }
+  if(k==='escape'){ if(UI.terra) setTerra(false); else if(TOOL!=='select') setTool('select'); else if(WK.on) setWalk(false); else select(null,true); return; }
   if(k==='enter'&&isDraw()){ finishDraw(); return; }
   if(k==='pageup'||k==='pagedown'){ e.preventDefault(); setFloor(P.cur+(k==='pageup'?1:-1)); return; }
   if(k==='r'&&!mod&&SEL&&SEL.kind==='item'){ rotSel(e.shiftKey?-90:90); return; }
@@ -2655,7 +3243,7 @@ function view3dImage(w,h,withRoof){
   UI.roof=withRoof; R3.roof.visible=roofShown(); WK.on=false; r.setPixelRatio(1); r.setSize(w,h,false); R3.cam.aspect=w/h; R3.cam.fov=50; R3.cam.updateProjectionMatrix();
   const b=bounds3d(), span=Math.max(b.x1-b.x0,b.y1-b.y0,3), up=P.cur>0, rs=roofShown();
   Object.assign(CAM,{tx:(b.x0+b.x1)/2,tz:(b.y0+b.y1)/2,ty:elevOf(P.cur)*(up?0.6:1)+(rs?1.2:0.4),yaw:0.5,pitch:rs||up?0.62:0.92,dist:clamp(span*0.62/Math.tan(25*Math.PI/180)+1,3,80)*(rs?1.15:1)*(up?1.12:1)});
-  applyCam(); updateWallCut(true); r.render(R3.scene,R3.cam);
+  const lc=r.localClippingEnabled; r.localClippingEnabled=false; applyCam(); updateWallCut(true); r.render(R3.scene,R3.cam); r.localClippingEnabled=lc;
   const out=document.createElement('canvas'); out.width=w; out.height=h; out.getContext('2d').drawImage(cv3,0,0,w,h);
   Object.assign(CAM,sv.cam); WK.on=sv.walk; UI.roof=sv.roof; R3.roof.visible=roofShown(); r.setPixelRatio(sv.pr); R3.cam.fov=sv.fov; R3.cam.aspect=sv.aspect; R3.cam.updateProjectionMatrix(); resize3d(); applyCam(); updateWallCut(true); need3=true;
   return out;
@@ -2816,7 +3404,7 @@ async function cloudRefresh(){
 const mostRecent=()=>Object.keys(ALL).sort((a,b)=>ALL[b].updated-ALL[a].updated)[0];
 function updProj(){ $('pName').textContent=P?P.name:''; }
 function openProject(id){
-  const p=ALL[id]; if(!p) return; P=p; SEL=null; D.pts=[]; UI.arm=null; if(WK.on) setWalk(false);
+  const p=ALL[id]; if(!p) return; P=p; SEL=null; D.pts=[]; UI.arm=null; if(WK.on) setWalk(false); if(UI.terra) setTerra(false);
   WC=null; R3.key=null; resetHistory(); lsSet(LSL,id); refreshAfter(); renderPanel(); updateFab(); updProj(); renderFloorBar(); fit2d(); if(R3.ok&&W3>1) fit3d(); subscribeCurrent();
 }
 function addProject(p,msg){ ALL[p.id]=p; openProject(p.id); saveSoon(); hideHome(); if(msg) toast(msg); }
@@ -2947,7 +3535,7 @@ applyCam();
 requestAnimationFrame(loop);
 showHome();
 initCloud().catch(()=>setSave('local'));
-window.__room={get P(){return P;},C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf,showHome,pick3,CAM,w2s,setNight,elecStats};
+window.__room={get P(){return P;},get SEL(){return SEL;},UI,BG,applyCam,setWalk,WK,panoBlob,makePano,traceWalls,pickBgFile,setXray,setSec,setTerra,sculpt,toggleMulti,curveWall,offsetPts,draw2d,C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf,showHome,pick3,CAM,w2s,setNight,elecStats};
 })();
 </script>
 </body></html>
