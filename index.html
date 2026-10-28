@@ -189,6 +189,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .drawbar input[type="range"]{width:170px;max-width:42vw;height:auto;padding:0;border:0;background:none;accent-color:var(--accent)}
 .stage[data-view="3d"] .p3d .drawbar{bottom:58px}
 .p3d .ov{max-width:min(calc(100% - 20px),450px)}
+@media (max-width:599px){.p3d .ov{flex-direction:row;flex-wrap:wrap;justify-content:flex-end}}
 .pmodal{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:16px;background:var(--scrim)}
 .pbox{width:min(940px,100%);display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
 .phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -1048,8 +1049,8 @@ function cleanProject(p){
   const q=blankProject(String(p.name||'แปลนห้อง').slice(0,80));
   if(typeof p.id==='string'&&/^[A-Za-z0-9_.~:@+-]{1,60}$/.test(p.id)) q.id=p.id;
   q.updated=num(p.updated,Date.now()); q.wallH=clamp(num(p.wallH,2.5),1.8,5); q.wallT=clamp(num(p.wallT,0.1),0.04,0.4);
-  const rf=p.roof||{}; q.roof={color:validColor(rf.color)||ROOF_COLORS[0],pitch:clamp(num(rf.pitch,30),10,50),axis:rf.axis==='x'||rf.axis==='y'?rf.axis:'auto',mat:ROOF_MATS[rf.mat]?rf.mat:'tile',style:ROOF_STYLES[rf.style]?rf.style:'gable',over:clamp(num(rf.over,0.45),0,1.5),gutter:!!rf.gutter,mode:rf.mode==='room'?'room':'all',flip:!!rf.flip,turbines:clamp(Math.round(num(rf.turbines,0)),0,6),gableVent:!!rf.gableVent,soffit:!!rf.soffit};
-  const src=Array.isArray(p.floors)&&p.floors.length?p.floors.slice(0,12):[{rooms:p.rooms,openings:p.openings,items:p.items}];
+  const rf=p.roof||{}; q.roof={color:validColor(rf.color)||ROOF_COLORS[0],pitch:clamp(num(rf.pitch,30),10,50),axis:rf.axis==='x'||rf.axis==='y'?rf.axis:'auto',mat:ROOF_MATS[rf.mat]?rf.mat:'tile',style:ROOF_STYLES[rf.style]?rf.style:'gable',over:clamp(num(rf.over,0.45),0,1.5),gutter:!!rf.gutter,mode:rf.mode==='room'?'room':'all',flip:!!rf.flip,turbines:clamp(Math.round(num(rf.turbines,0)),0,4),gableVent:!!rf.gableVent,soffit:!!rf.soffit};
+  const src=Array.isArray(p.floors)&&p.floors.length?p.floors.slice(0,8):[{rooms:p.rooms,openings:p.openings,items:p.items}];
   q.floors=src.map((f,k)=>{
     const fl=newFloor(k); f=f||{}; if(typeof f.id==='string'&&f.id) fl.id=f.id.slice(0,40); if(f.name) fl.name=String(f.name).slice(0,40);
     (Array.isArray(f.rooms)?f.rooms:[]).forEach(r=>{
@@ -1188,17 +1189,18 @@ function computeStats(){
 
 /* ---------------- ย้อนกลับ ---------------- */
 const HIST={u:[],r:[],cur:''};
-const snapState=()=>JSON.stringify({name:P.name,wallH:P.wallH,wallT:P.wallT,roof:roofOf(P),floors:P.floors,north:P.north||0,views:P.views||[],terrain:P.terrain||null});
+const bgT=()=>BG.data?{k:BG.key,x:BG.data.x,y:BG.data.y,w:BG.data.w,lock:!!BG.data.lock}:null;
+const snapState=()=>JSON.stringify({bgT:bgT(),name:P.name,wallH:P.wallH,wallT:P.wallT,roof:roofOf(P),floors:P.floors,north:P.north||0,views:P.views||[],terrain:P.terrain||null});
 function resetHistory(){ HIST.u=[]; HIST.r=[]; HIST.cur=snapState(); updUndo(); }
 function updUndo(){ $('undoBtn').disabled=!HIST.u.length; $('redoBtn').disabled=!HIST.r.length; }
 function commit(){
   tidyGroups(); const s=snapState(); if(s!==HIST.cur){ HIST.u.push(HIST.cur); if(HIST.u.length>100) HIST.u.shift(); HIST.r=[]; HIST.cur=s; if(P.id===AUTO) AUTO=null; saveSoon(); updUndo(); }
   refreshAfter(); const ae=document.activeElement; if(!(ae&&ae.closest&&ae.closest('#side')&&/INPUT/.test(ae.tagName))) renderPanel(); else refreshStatus();
 }
-function restore(s){ const o=JSON.parse(s); Object.assign(P,{name:o.name,wallH:o.wallH,wallT:o.wallT,roof:o.roof,floors:o.floors,north:o.north||0,views:o.views||[],terrain:o.terrain||null}); P.floors.forEach(f=>{ f.groups=f.groups||[]; }); P.cur=Math.min(P.cur,P.floors.length-1); if(SEL&&!selObj()) SEL=null; refreshAfter(); renderPanel(); updateFab(); updProj(); renderFloorBar(); saveSoon(); }
+function restore(s){ const o=JSON.parse(s); Object.assign(P,{name:o.name,wallH:o.wallH,wallT:o.wallT,roof:o.roof,floors:o.floors,north:o.north||0,views:o.views||[],terrain:o.terrain||null}); P.floors.forEach(f=>{ f.groups=f.groups||[]; }); P.cur=Math.min(P.cur,P.floors.length-1); if(o.bgT&&BG.data&&o.bgT.k===BG.key){ Object.assign(BG.data,{x:o.bgT.x,y:o.bgT.y,w:o.bgT.w,lock:o.bgT.lock}); saveBg(); } if(SEL&&!selObj()) SEL=null; clearFollow(); refreshAfter(); placeSun(); renderPanel(); updateFab(); updProj(); renderFloorBar(); saveSoon(); }
 function undo(){ if(!HIST.u.length) return; HIST.r.push(HIST.cur); HIST.cur=HIST.u.pop(); restore(HIST.cur); updUndo(); }
 function redo(){ if(!HIST.r.length) return; HIST.u.push(HIST.cur); HIST.cur=HIST.r.pop(); restore(HIST.cur); updUndo(); }
-function refreshAfter(){ computeProblems(); computeStats(); need2=true; sync3d(); }
+function refreshAfter(){ followSupports(); followWires(); computeProblems(); computeStats(); need2=true; sync3d(); }
 
 /* ---------------- ไฟฟ้า ---------------- */
 /* จุดของสายที่อยู่บนของไฟฟ้า: สายลงจากฝ้าไปที่กลางของ (ปลายสายลง 1 เส้น จุดกลางสายลงแล้วขึ้น 2 เส้น) */
@@ -1212,7 +1214,30 @@ function elecStats(){
   P.floors.forEach(f=>{ f.items.forEach(it=>{ const c=C[it.type]; if(c.light) n.light++; else if(c.elec) n[c.elec]++; }); f.wires.forEach(w=>{ len[w.c]+=wireLen(w,f); }); });
   return {n,len,tot:len.light+len.plug+len.other};
 }
-function live(){ need2=true; sync3d(); }
+function live(){ followSupports(); followWires(); need2=true; sync3d(); }
+/* ของที่วางบนของอื่น (it.on) ตามของที่รองไปทุกวิธี: ลาก 2D/3D กลุ่ม ปุ่มลูกศร พิมพ์ขนาด/มุม
+   จำตำแหน่งเทียบกับของที่รองไว้ (สัดส่วนกว้าง/ลึก/สูง + มุม) พอของที่รองเปลี่ยนก็วางกลับตามสัดส่วนเดิม */
+const RIDE={}, LASTPOS={};
+function clearFollow(){ for(const k in RIDE) delete RIDE[k]; for(const k in LASTPOS) delete LASTPOS[k]; }
+function followSupports(){
+  if(!P) return;
+  P.floors.forEach(f=>{ const byId={}; f.items.forEach(o=>{ byId[o.id]=o; });
+    for(let pass=0;pass<5;pass++){ let moved=false;
+      f.items.forEach(r=>{ const sp=r.on&&byId[r.on]; if(!sp){ delete RIDE[r.id]; return; }
+        const H=itemH(sp)||1, sig=[sp.x,sp.y,sp.rot,sp.elev||0,H,sp.w,sp.d].join(','), k=RIDE[r.id];
+        if(k&&k.s===sp.id&&k.sig!==sig){ const a=sp.rot*D2R, c=Math.cos(a), sn=Math.sin(a), lx=k.fx*sp.w, ly=k.fy*sp.d;
+          r.x=rd(sp.x+lx*c-ly*sn); r.y=rd(sp.y+lx*sn+ly*c); r.elev=rd(Math.max(0,(sp.elev||0)+k.fe*H)); r.rot=((sp.rot+k.dr)%360+360)%360; moved=true; }
+        const a=-sp.rot*D2R, c=Math.cos(a), sn=Math.sin(a), dx=r.x-sp.x, dy=r.y-sp.y;
+        RIDE[r.id]={s:sp.id,sig,fx:sp.w?(dx*c-dy*sn)/sp.w:0,fy:sp.d?(dx*sn+dy*c)/sp.d:0,fe:((r.elev||0)-(sp.elev||0))/H,dr:r.rot-sp.rot}; });
+      if(!moved) break; } });
+}
+/* จุดสายไฟที่อยู่กลางของไฟฟ้า ย้ายตามของนั้นทุกวิธีที่ย้าย */
+function followWires(){
+  if(!P) return;
+  P.floors.forEach(f=>f.items.forEach(it=>{ if(!(isElec(it)||isLight(it))) return; const lp=LASTPOS[it.id];
+    if(lp&&(lp[0]!==it.x||lp[1]!==it.y)) f.wires.forEach(w=>w.pts.forEach((q,i)=>{ if(Math.hypot(q[0]-lp[0],q[1]-lp[1])<0.02) w.pts[i]=[it.x,it.y]; }));
+    LASTPOS[it.id]=[it.x,it.y]; }));
+}
 
 /* ---------------- ลายพื้น ---------------- */
 const FC={}, FP={};
@@ -1530,6 +1555,7 @@ const BG={key:null,data:null,img:null};
 let bgDbP=null;
 function bgDb(){ return bgDbP||(bgDbP=new Promise(res=>{ try{ const r=indexedDB.open('ljh-bg',1); r.onupgradeneeded=()=>r.result.createObjectStore('bg'); r.onsuccess=()=>res(r.result); r.onerror=()=>res(null); }catch(e){ res(null); } })); }
 async function bgGet(k){ const db=await bgDb(); if(!db) return null; return new Promise(res=>{ try{ const q=db.transaction('bg').objectStore('bg').get(k); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }catch(e){ res(null); } }); }
+async function bgDropPrefix(pre){ const db=await bgDb(); if(!db) return; try{ const st=db.transaction('bg','readwrite').objectStore('bg'), q=st.openCursor(IDBKeyRange.bound(pre,pre+'\uffff')); q.onsuccess=()=>{ const cu=q.result; if(cu){ cu.delete(); cu.continue(); } }; }catch(e){} }
 async function bgPut(k,v){ const db=await bgDb(); if(!db) return false; return new Promise(res=>{ try{ const t=db.transaction('bg','readwrite'), st=t.objectStore('bg'); v?st.put(v,k):st.delete(k); t.oncomplete=()=>res(true); t.onerror=()=>res(false); }catch(e){ res(false); } }); }
 const bgKey=()=>P?P.id+'/'+curFloor().id:null;
 function loadBg(){ const k=bgKey(); BG.key=k; BG.data=null; BG.img=null; if(!k) return; bgGet(k).then(d=>{ if(BG.key!==k||!d) return; BG.data=d; const im=new Image(); im.onload=()=>{ if(BG.key===k){ BG.img=im; need2=true; if(UI.tab==='info') renderPanel(); } }; im.src=d.src; }); }
@@ -1642,9 +1668,9 @@ function addShape(pts){
 /* Follow Me (แบบ SketchUp): วาดเส้นทางแล้วให้รูปหน้าตัดวิ่งตาม ทำราว ท่อ ขอบคันหิน บัว */
 const SWEEP_PRESETS={rail:['ราวกันตก',{prof:'round',w:0.05,posts:true},0.05,0.9,'#7a5236','wood'],pipe:['ท่อ',{prof:'round',w:0.1,posts:false},0.1,0,'#9aa1a8','plain'],curb:['ขอบคันหิน',{prof:'curb',w:0.15,posts:false},0.2,0,'#d9d4ca','concrete'],skirt:['บัวผนัง',{prof:'cove',w:0.04,posts:false},0.1,0,'#f3f1ec','plain']};
 function addSweep(pts,closed){
-  const s={id:uid('s'),name:'Follow Me '+(P.shapes.length+1),pts:pts.map(q=>[rd(q[0]),rd(q[1])]),h:0.08,elev:0,color:'#9aa1a8',mat:'plain',sweep:{prof:'round',w:0.08,closed:!!closed&&pts.length>2,posts:false}};
+  const s={id:uid('s'),name:'เส้นทาง '+(P.shapes.length+1),pts:pts.map(q=>[rd(q[0]),rd(q[1])]),h:0.08,elev:0,color:'#9aa1a8',mat:'plain',sweep:{prof:'round',w:0.08,closed:!!closed&&pts.length>2,posts:false}};
   P.shapes.push(s); D.pts=[]; D.hover=null; D.closed=false; setTool('select'); select({kind:'shape',id:s.id}); commit(); setSheet(true);
-  toast('ได้เส้น Follow Me แล้ว · เลือกรูปหน้าตัด ขนาด และความสูงที่แผง "แก้ไข"');
+  toast('ได้เส้นทางแล้ว · เลือกรูปหน้าตัด ขนาด และความสูงที่แผง "แก้ไข"');
 }
 function postsOf(s){ const p=s.pts, n=p.length, cl=s.sweep.closed&&n>2, segs=cl?n:n-1, out=[]; for(let i=0;i<segs;i++){ const a=p[i], b=p[(i+1)%n], L=Math.hypot(b[0]-a[0],b[1]-a[1]), k=Math.max(1,Math.round(L/1.2)); for(let j=0;j<k;j++) out.push([a[0]+(b[0]-a[0])*j/k,a[1]+(b[1]-a[1])*j/k]); } if(!cl) out.push(p[n-1]); return out; }
 /* ย้าย/หมุน/ย่อรูปทรงพร้อมรูเจาะกลาง (ถ้ามี) */
@@ -1767,7 +1793,7 @@ function startDrag2(g){
   if(h.kind==='corner'){ g.type='corner'; g.room=h.room; g.i=h.i; SEL.corner=h.i; SEL.wall=null; return; }
   if(h.kind==='edge'){ const r=getRoom(h.room), e=edgeOf(r,h.i); g.type='edge'; g.room=h.room; g.i=h.i; g.nx=e.nx; g.ny=e.ny; g.a0=r.pts[h.i].slice(); g.b0=r.pts[(h.i+1)%r.pts.length].slice(); return; }
   if(h.kind==='open'){ g.type='open'; g.id=h.id; if(!(SEL&&SEL.id===h.id)) select({kind:'open',id:h.id}); return; }
-  if(h.kind==='item'){ const it=getItem(h.id); g.type='item'; g.id=h.id; g.ix=it.x; g.iy=it.y; g.ie=it.elev||0; g.riders=ridersOf(it).map(o=>({id:o.id,x:o.x,y:o.y,elev:o.elev||0})); g.wv=[]; if(isElec(it)||isLight(it)) P.wires.forEach(wr=>wr.pts.forEach((q,i)=>{ if(Math.hypot(q[0]-it.x,q[1]-it.y)<0.02) g.wv.push([wr,i]); })); if(!(SEL&&SEL.id===h.id)) select({kind:'item',id:h.id}); return; }
+  if(h.kind==='item'){ const it=getItem(h.id); g.type='item'; g.id=h.id; g.ix=it.x; g.iy=it.y; g.ie=it.elev||0; g.riders=ridersOf(it).map(o=>({id:o.id,x:o.x,y:o.y,elev:o.elev||0})); if(!(SEL&&SEL.id===h.id)) select({kind:'item',id:h.id}); return; }
   if(h.kind==='room'&&SEL&&SEL.kind==='room'&&SEL.id===h.id){ const r=getRoom(h.id); g.type='room'; g.id=h.id; g.pts0=deep(r.pts); g.items=P.items.filter(it=>pip(it.x,it.y,r.pts)).map(it=>({id:it.id,x:it.x,y:it.y})); return; }
   g.type='pan';
 }
@@ -1775,7 +1801,7 @@ function moveDrag2(g,p,e){
   const w=s2w(p[0],p[1]);
   switch(g.type){
     case 'pan': V2.ox+=p[0]-g.lx; V2.oy+=p[1]-g.ly; need2=true; break;
-    case 'item': { const it=getItem(g.id); if(!it) break; it.x=g.ix+(w[0]-g.w0[0]); it.y=g.iy+(w[1]-g.w0[1]); if(!e.altKey) snapItem(it); (g.wv||[]).forEach(([wr,i])=>{ wr.pts[i]=[it.x,it.y]; }); moveRiders(g,it); g.moved=true; live(); break; }
+    case 'item': { const it=getItem(g.id); if(!it) break; it.x=g.ix+(w[0]-g.w0[0]); it.y=g.iy+(w[1]-g.w0[1]); if(!e.altKey) snapItem(it); moveRiders(g,it); g.moved=true; live(); break; }
     case 'rot': { const it=getItem(g.id); if(!it) break; const c=w2s(it.x,it.y); let a=Math.atan2(p[1]-c[1],p[0]-c[0])*180/Math.PI+90; a=e.shiftKey?Math.round(a):Math.round(a/15)*15; it.rot=((a%360)+360)%360; rotRiders(g.riders,it,it.rot-g.rot0); g.moved=true; live(); break; }
     case 'multi': moveMulti(g,snapv(w[0]-g.w0[0],0.01),snapv(w[1]-g.w0[1],0.01)); break;
     case 'box': g.p1=w; need2=true; break;
@@ -1804,7 +1830,7 @@ function endDrag2(){
       addMulti(P.items.filter(it=>inb(it.x,it.y)).map(it=>it.id),P.shapes.filter(s=>{ const b=bboxPts(s.pts); return inb((b.x0+b.x1)/2,(b.y0+b.y1)/2); }).map(s=>s.id)); } need2=true; return; }
   if(g.type==='item'&&g.moved){ const it=getItem(g.id); if(it){ dropOn(it); moveRiders(g,it); } }
   if(g.type==='rect'&&g.p1){ const a=g.p0, b=g.p1, w=Math.abs(b[0]-a[0]), d=Math.abs(b[1]-a[1]); if(TOOL==='shape'){ if(w>=0.05&&d>=0.05) addShape(rectPts(Math.min(a[0],b[0]),Math.min(a[1],b[1]),w,d)); else need2=true; return; } if(w>=0.3&&d>=0.3) addRectRoom(Math.min(a[0],b[0]),Math.min(a[1],b[1]),w,d); else need2=true; return; }
-  if(g.moved){ if(g.bg){ saveBg(); if(UI.tab==='edit') renderPanel(); return; } updateFab(); commit(); }
+  if(g.moved){ if(g.bg){ saveBg(); commit(); return; } updateFab(); commit(); }
 }
 function up2(e){
   if(!P2.ptrs[e.pointerId]) return; delete P2.ptrs[e.pointerId]; const g=P2.g; if(!g) return;
@@ -1871,7 +1897,7 @@ function finishDraw(){
 function updDrawBar(){
   const n=D.pts.length, wi=TOOL==='wire', kb=$('dbKinds'); kb.hidden=!wi; $('dbClose').textContent=wi?'จบสาย':'ปิดห้อง';
   if(wi){ kb.innerHTML=Object.keys(WIRE_KINDS).map(k=>`<button type="button" data-wk="${k}" aria-pressed="${UI.wireKind===k}">${WIRE_KINDS[k][0]}</button>`).join(''); $('dbTxt').textContent=n?('วางแล้ว '+n+' จุด'+(n>=2?' · แตะจุดสุดท้ายซ้ำเพื่อจบสาย':'')):'แตะทีละจุด เริ่มจากตู้ไฟหรือสวิตช์'; $('dbUndo').disabled=!n; $('dbClose').disabled=n<2; return; }
-  if(TOOL==='shape'){ kb.hidden=false; kb.innerHTML=[['poly','มุม/สี่เหลี่ยม'],['circle','วงกลม'],['path','เส้นทาง (Follow Me)']].map(([k,t])=>`<button type="button" data-sm="${k}" aria-pressed="${UI.shapeMode===k}">${t}</button>`).join(''); }
+  if(TOOL==='shape'){ kb.hidden=false; kb.innerHTML=[['poly','มุม/สี่เหลี่ยม'],['circle','วงกลม'],['path','เส้นทาง']].map(([k,t])=>`<button type="button" data-sm="${k}" aria-pressed="${UI.shapeMode===k}">${t}</button>`).join(''); }
   if(pathMode()){ $('dbClose').textContent='จบเส้น'; $('dbTxt').textContent=n?('วางแล้ว '+n+' จุด'+(n>=2?' · แตะจุดสุดท้ายซ้ำเพื่อจบ แตะจุดแรกเพื่อต่อเป็นวง':'')):'แตะทีละจุดตามทางที่จะให้รูปทรงวิ่งไป เช่น ราว ท่อ ขอบคันหิน'; $('dbUndo').disabled=!n; $('dbClose').disabled=n<2; return; }
   updDrawBarRoom(n);
   if(TOOL==='shape'&&UI.shapeMode==='circle') $('dbTxt').textContent='ลากจากจุดกลางออกไปเพื่อวาดวงกลม หรือแตะเพื่อวางวงกลม 1 ม.';
@@ -2056,7 +2082,9 @@ function roofMat(c,kind){
   return TEX[k]=new T.MeshStandardMaterial({map:t,color:'#ffffff',roughness:kind==='metal'?0.45:0.72,metalness:kind==='metal'?0.35:0});
 }
 const topFloor=()=>P.floors[P.floors.length-1];
-const roofRooms=()=>topFloor().rooms.filter(r=>r.wallType!=='none'&&!(roofOf(P).mode==='room'&&r.roof==='none'));
+const roofRooms=()=>roofRoomsOf(P.floors.length-1);
+/* ห้องที่ต้องมีหลังคา: ชั้นบนสุดทุกห้อง · ชั้นล่างเฉพาะห้องที่ชั้นบนไม่ได้คลุมไว้ (ส่วนที่ยื่นออกไป) */
+function roofRoomsOf(k){ const up=P.floors[k+1]; return P.floors[k].rooms.filter(r=>r.wallType!=='none'&&!(roofOf(P).mode==='room'&&r.roof==='none')&&!(up&&up.rooms.some(u=>{ const lp=labelPoint(r.pts); return pip(lp[0],lp[1],u.pts); }))); }
 function roomsBox(rooms){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; (rooms||roofRooms()).forEach(r=>r.pts.forEach((q,i)=>[q,outerPt(r,i,P.wallT)].forEach(p=>{ x0=Math.min(x0,p[0]); x1=Math.max(x1,p[0]); y0=Math.min(y0,p[1]); y1=Math.max(y1,p[1]); }))); return {x0,y0,x1,y1}; }
 function roofAlong(b){ const rf=roofOf(P); if(rf.axis!=='auto') return rf.axis; b=b||roomsBox(); return (b.x1-b.x0)>=(b.y1-b.y0)?'x':'y'; }
 /* คานไม้ระหว่างสองจุด (กล่องยาว w กว้าง h สูง) */
@@ -2074,10 +2102,10 @@ const dedupe=q=>q.filter((p,i)=>{ const n=q[(i+1)%q.length]; return Math.hypot(p
 /* หลังคาทั้งหลัง (หรือแยกทีละห้อง) */
 function buildRoof(){
   const g=R3.roof; disposeTree(g); while(g.children.length) g.remove(g.children[0]);
-  g.position.y=elevOf(P.floors.length-1); g.visible=roofShown();
-  const rooms=roofRooms(); if(!rooms.length) return; const rf=roofOf(P);
-  if(rf.mode==='room') rooms.forEach(r=>roofOver(g,[r],r.roof||rf.style||'gable'));
-  else roofOver(g,rooms,rf.style||'gable');
+  g.position.y=0; g.visible=roofShown(); const rf=roofOf(P);
+  for(let k=P.floors.length-1;k>=0;k--){ const rooms=roofRoomsOf(k); if(!rooms.length) continue; const sub=new T.Group(); sub.position.y=elevOf(k); g.add(sub);
+    if(rf.mode==='room') rooms.forEach(r=>roofOver(sub,[r],r.roof||rf.style||'gable'));
+    else roofOver(sub,rooms,rf.style||'gable'); }
 }
 /* หลังคาหนึ่งผืนคลุมกรอบนอกของห้องที่ให้มา: พิกัด a ตามแนวสัน c ขวางสัน (0 = กลาง) · จั่ว ปั้นหยา เพิงหมาแหงน หรือแบน */
 function roofOver(g,rooms,style){
@@ -2320,6 +2348,7 @@ function sculpt(g,pt,dy){
   updTerrainMesh(); need2=true;
 }
 function setTerra(on){
+  if(on&&UI.sec&&UI.sec.on) setSec(false);
   UI.terra=on&&!!P.terrain; $('terraBar').hidden=!UI.terra; if(R3.ok){ R3.brush.visible=false; R3.brush.material.color.set(TK.accent); } updTerraBar();
   if(UI.terra){ if(WK.on) setWalk(false); if(P.cur!==0) setFloor(0); if(UI.view==='2d') setView(isWide()?'split':'3d'); select(null,true); toast('ลากขึ้นเพื่อยกเนิน ลากลงเพื่อขุดแอ่ง · สองนิ้ว/คลิกขวาเพื่อเลื่อนภาพ'); }
   need3=true;
@@ -2347,6 +2376,7 @@ function applyClip(){
   R3.scene.traverse(o=>{ if(o===R3.ground||o===R3.brush||!o.material) return; (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(m.clippingPlanes!==planes){ m.clippingPlanes=planes; m.clipShadows=on; m.needsUpdate=true; } }); });
 }
 function setSec(on){
+  if(on&&UI.terra) setTerra(false);
   UI.sec.on=on; $('secBtn').setAttribute('aria-pressed',on?'true':'false'); $('secBar').hidden=!on; updSecBar(); if(!R3.ok) return; updSec(); applyClip(); need3=true;
   if(on){ if(UI.view==='2d') setView(isWide()?'split':'3d'); toast('เลื่อนแถบเพื่อตัดดูข้างใน · เลือกตัดขวาง ตัดยาว หรือแนวนอน'); }
 }
@@ -2594,7 +2624,7 @@ function pgEdit(){
   }
   if(SEL.kind==='shape'&&o.sweep){ const sw=o.sweep;
     return `<input id="s-name" class="in-name" type="text" value="${esc(o.name)}" aria-label="ชื่อรูปทรง">
-    <p class="muted small" style="margin:8px 0 0">Follow Me: รูปหน้าตัดวิ่งไปตามเส้นทาง · ใน 2D ลากจุดเพื่อแก้เส้น ลากเส้นเพื่อย้าย</p>
+    <p class="muted small" style="margin:8px 0 0">เส้นทาง: รูปหน้าตัดวิ่งไปตามเส้นทาง · ใน 2D ลากจุดเพื่อแก้เส้น ลากเส้นเพื่อย้าย</p>
     <h3>แบบสำเร็จรูป</h3><div class="btnrow" style="margin-top:0">${Object.keys(SWEEP_PRESETS).map(k=>`<button type="button" class="btn sm" data-act="spreset" data-v="${k}">${SWEEP_PRESETS[k][0]}</button>`).join('')}</div>
     <h3>รูปหน้าตัด</h3><div class="seg sm" style="flex-wrap:wrap">${Object.keys(SWEEP_PROFS).map(k=>`<button type="button" data-act="sprof" data-v="${k}" aria-pressed="${sw.prof===k}">${SWEEP_PROFS[k]}</button>`).join('')}</div>
     <h3>ขนาด (ซม.)</h3>
@@ -2617,7 +2647,7 @@ function pgEdit(){
     <h3>วัสดุ</h3><div class="seg sm" style="margin-bottom:8px">${Object.keys(SHAPE_MATS).map(k=>`<button type="button" data-act="smat" data-v="${k}" aria-pressed="${o.mat===k}">${SHAPE_MATS[k]}</button>`).join('')}</div>
     <div class="sw">${swatches(SHAPE_COLORS,o.color,'scol')}</div>
     <h3>ย่อ / ขยาย (Scale)</h3><div class="seg sm">${[[0.5,'50%'],[0.9,'90%'],[1.1,'110%'],[2,'200%']].map(([v,t])=>`<button type="button" data-act="sscale" data-v="${v}">${t}</button>`).join('')}</div>
-    <h3>Offset (ขยับขอบเข้า/ออกเท่ากันทุกด้าน)</h3>
+    <h3>ขยับขอบเข้า/ออก (เท่ากันทุกด้าน)</h3>
     <div class="f3"><label class="f" for="s-off">ระยะ (ซม.)<input id="s-off" type="number" inputmode="numeric" min="1" value="${UI.offD}"></label></div>
     <div class="btnrow"><button type="button" class="btn sm" data-act="soff" data-v="out">+ รูปทรงขอบนอก</button><button type="button" class="btn sm" data-act="soff" data-v="in">+ รูปทรงด้านใน</button>${o.hole?`<button type="button" class="btn sm" data-act="soff" data-v="fill">ปิดรูตรงกลาง</button>`:`<button type="button" class="btn sm" data-act="soff" data-v="frame">ทำเป็นกรอบ (เจาะกลาง)</button>`}</div>
     ${arrHtml()}
@@ -2726,7 +2756,7 @@ function pgInfo(){
     <li>แตะห้องหนึ่งครั้ง แล้วลากมุมหรือจุดกลางผนังเพื่อเปลี่ยนขนาด ลากในห้องเพื่อย้ายทั้งห้อง</li>
     <li>ลากที่ว่างเพื่อเลื่อนแปลน ใช้สองนิ้วหรือล้อเมาส์เพื่อซูม</li>
     <li>3D: ลากเพื่อหมุนรอบ สองนิ้วหรือคลิกขวาเพื่อเลื่อน กด "เดินดู" เพื่อเดินในห้อง</li>
-    <li>ปั้นรูปทรง (แบบ SketchUp): แตะวางมุมหรือลากเป็นสี่เหลี่ยม แล้วใน 3D ลากด้านบนขึ้นลงเพื่อดัน/ดึงความสูง</li>
+    <li>ปั้นรูปทรง: แตะวางมุมหรือลากเป็นสี่เหลี่ยม แล้วใน 3D ลากด้านบนขึ้นลงเพื่อดัน/ดึงความสูง</li>
     <li>ไฟฟ้า: วางปลั๊ก สวิตช์ หลอดไฟ ตู้ไฟ จากหมวด "ไฟฟ้า" แล้วกด "สายไฟ" แตะทีละจุดจากตู้ไฟไปหาของ แตะจุดสุดท้ายซ้ำเพื่อจบสาย · ใน 3D กด "เปิดไฟ" ดูตอนกลางคืน</li>
     <li>วัดระยะ: กด "วัดระยะ" แล้วแตะ 2 จุด · ข้อความ: กด "ข้อความ" แล้วแตะที่แปลน · รูปแปลน: "ใส่รูปแปลน" แล้ววัดเส้นที่รู้ความยาวเพื่อตั้งสเกล</li>
     <li>รูปทรง: เลือก "วงกลม" ที่แถบล่างได้ · ใส่วัสดุหญ้า น้ำ ทางเดิน กรวด ทำสนามหรือสระได้ · ของและรูปทรงทำซ้ำเป็นแถวได้ที่ "แก้ไข"</li>
@@ -2736,7 +2766,7 @@ function pgInfo(){
     <li>วางของบนโต๊ะหรือชั้นวาง: ลากของไปวางบนนั้น (ใน 3D ชี้ชั้นที่ต้องการได้เลย) เลือกชั้นได้ที่ "แก้ไข" · เลือกโต๊ะไว้แล้วกดเพิ่มของ ของจะวางบนโต๊ะให้</li>
     <li>เอียงของ: ที่ "แก้ไข" ใส่องศาเอียงหน้า-หลัง ซ้าย-ขวา หรือกด "นอนหงาย" "นอนตะแคง"</li>
     <li>3D: "โปร่ง" มองทะลุผนัง · "ตัดดู" เลื่อนแถบผ่าดูข้างใน · "360°" ทำรูปหมุนรอบตัวจากจุดที่ยืน (กดเดินดูไปจุดที่ชอบก่อนก็ได้)</li>
-    <li>ปั้นรูปทรง: เลือก "เส้นทาง (Follow Me)" ทำราว ท่อ ขอบคันหิน บัว · แตะรูปทรงแล้วใช้ Offset ทำขอบหรือกรอบ</li>
+    <li>ปั้นรูปทรง: เลือก "เส้นทาง" ทำราว ท่อ ขอบคันหิน บัว · แตะรูปทรงแล้วใช้ "ขยับขอบ" ทำขอบหรือกรอบ</li>
     <li>ผนังโค้ง: แตะห้อง แตะ "ผนัง 1, 2, ..." ในรายการ แล้วกด "โค้งออก" หรือ "โค้งเข้า"</li>
     <li>ตัวหนังสือ 3D: กด "ข้อความ" วางข้อความ แล้วติ๊ก "ทำเป็นตัวหนังสือ 3D"</li>
     <li>พื้นดิน: "สร้างพื้นดินรอบบ้าน" แล้วลากในภาพ 3D เพื่อยกเนินหรือขุดแอ่ง</li>
@@ -2919,7 +2949,7 @@ function delSel(){
   else if(SEL.kind==='wire') P.wires=P.wires.filter(x=>x!==o);
   else if(SEL.kind==='dim') P.dims=P.dims.filter(x=>x!==o);
   else if(SEL.kind==='label') P.labels=P.labels.filter(x=>x!==o);
-  else if(SEL.kind==='bg'){ BG.data=null; BG.img=null; bgPut(BG.key,null); select(null,true); need2=true; toast('ลบรูปพื้นหลังแล้ว'); return; }
+  else if(SEL.kind==='bg'){ if(!armOnce('bg',null,'')){ toast('แตะ "ลบรูป" อีกครั้งเพื่อลบรูปแปลน (ย้อนกลับไม่ได้)'); return; } UI.arm=null; BG.data=null; BG.img=null; bgPut(BG.key,null); select(null,true); need2=true; toast('ลบรูปพื้นหลังแล้ว'); return; }
   else return;
   select(null,true); commit();
 }
@@ -2951,7 +2981,7 @@ function act(a,el){
     case 'dup': dupSel(); break;
     case 'del': delSel(); break;
     case 'openEdit': setTab('edit',true); break;
-    case 'size0': if(o&&SEL.kind==='item'){ const c=C[o.type]; o.w=c.w; o.d=c.d; o.h=c.h; o.elev=c.ceil?rd(P.wallH-c.h):(c.elev||0); commit(); } break;
+    case 'size0': if(o&&SEL.kind==='item'){ const c=C[o.type]; o.w=c.w; o.d=c.d; o.h=c.h; if(!(o.on&&getItem(o.on))) o.elev=c.ceil?rd(P.wallH-c.h):(c.elev||0); commit(); } break;
     case 'icol': if(o&&SEL.kind==='item'){ if(v) o.color=v; else delete o.color; commit(); } break;
     case 'scol': if(o&&SEL.kind==='shape'){ o.color=v; commit(); } break;
     case 'smat': if(o&&SEL.kind==='shape'){ o.mat=v; if(v==='wood'&&!['#b58a5f','#7a5236'].includes(o.color)) o.color='#b58a5f'; if(v==='glass'&&!['#3f6fb5','#2f7d6b','#f3f1ec'].includes(o.color)) o.color='#8fc3e0'; if(SURFACE_COLOR[v]){ o.color=SURFACE_COLOR[v]; if(o.h>0.2) o.h=0.03; } commit(); } break;
@@ -3002,7 +3032,7 @@ function act(a,el){
       if(v==='frame'){ o.hole=res; commit(); toast('ทำเป็นกรอบแล้ว ขอบหนา '+cm(d)+' ซม.'); break; }
       const c=deep(o); c.id=uid('s'); c.name=o.name+(v==='out'?' ขอบนอก':' ด้านใน'); c.pts=res; delete c.hole; delete c.grp; P.shapes.push(c); select({kind:'shape',id:c.id},true); commit(); toast('ได้รูปทรงใหม่ '+(v==='out'?'ใหญ่ขึ้น':'เล็กลง')+' '+cm(d)+' ซม. ทุกด้าน'); } break;
     case 'sprof': if(o&&SEL.kind==='shape'&&o.sweep){ o.sweep.prof=v; commit(); } break;
-    case 'spreset': if(o&&SEL.kind==='shape'&&o.sweep&&SWEEP_PRESETS[v]){ const p=SWEEP_PRESETS[v]; Object.assign(o.sweep,p[1]); o.h=p[2]; o.elev=p[3]; o.color=p[4]; o.mat=p[5]; if(/^Follow Me/.test(o.name)) o.name=p[0]; commit(); } break;
+    case 'spreset': if(o&&SEL.kind==='shape'&&o.sweep&&SWEEP_PRESETS[v]){ const p=SWEEP_PRESETS[v]; Object.assign(o.sweep,p[1]); o.h=p[2]; o.elev=p[3]; o.color=p[4]; o.mat=p[5]; if(/^(Follow Me|เส้นทาง)( \d+)?$/.test(o.name)) o.name=p[0]; commit(); } break;
     case 'curve': if(o&&SEL.kind==='room'&&SEL.wall!=null){ if(curveWall(o,SEL.wall,(+v)*Math.abs(UI.bulge)/100)){ SEL.wall=null; SEL.corner=null; commit(); toast('ทำผนังโค้งแล้ว · กดย้อนกลับถ้ายังไม่ชอบ'); } else toast('ผนังสั้นไปหรือโค้งน้อยไป'); } break;
     case 'lup': if(o&&SEL.kind==='label'){ o.up=v==='1'; commit(); } break;
     case 'trace': traceWalls(); break;
@@ -3078,8 +3108,8 @@ function onField(el,final){
   if(id==='c-q'){ UI.q=el.value; $('c-grid').innerHTML=gridHtml(); document.querySelectorAll('#c-cats .chip').forEach(c=>c.setAttribute('aria-pressed',(!UI.q&&UI.cat===c.dataset.v)?'true':'false')); drawCardThumbs(); return; }
   if(id==='u-labels'||id==='u-dims'){ UI[id==='u-labels'?'labels':'dims']=el.checked; savePrefs(); need2=true; return; }
   if(id==='u-roof'){ setRoof(el.checked); return; }
-  if(id==='bg-w'&&BG.data){ const v=numIn(el,0.5,500); if(v!=null){ BG.data.w=v; saveBg(); need2=true; } return; }
-  if((id==='bg-lock'||id==='bg-hide')&&BG.data){ BG.data[id==='bg-lock'?'lock':'hide']=el.checked; saveBg(); need2=true; return; }
+  if(id==='bg-w'&&BG.data){ const v=numIn(el,0.5,500); if(v!=null){ BG.data.w=v; saveBg(); need2=true; } if(final) commit(); return; }
+  if((id==='bg-lock'||id==='bg-hide')&&BG.data){ BG.data[id==='bg-lock'?'lock':'hide']=el.checked; saveBg(); need2=true; commit(); return; }
   if(id==='l-text'&&o&&SEL.kind==='label'){ o.text=el.value.slice(0,80)||'ข้อความ'; need2=true; if(final) commit(); return; }
   if(id==='g-name'&&SEL&&SEL.kind==='multi'&&SEL.grp){ const gr=getGroup(SEL.grp); if(gr){ gr.name=el.value.trim().slice(0,40)||'กลุ่ม'; need2=true; if(final) commit(); } return; }
   if(o&&SEL.kind==='label'&&['l-3d','l-d3','l-elev','l-rot','l-size'].includes(id)){
@@ -3277,7 +3307,7 @@ function makePdf(pages){
 }
 let pdfBusy=false;
 async function exportPdf(){
-  if(!P||pdfBusy) return; pdfBusy=true; blurField(); toast('กำลังทำ PDF…');
+  if(!P||pdfBusy) return; pdfBusy=true; blurField(); toast('กำลังทำ PDF…'); const curStart=P.cur;
   try{
     try{ await Promise.all([PF.title,PF.h,PF.b,PF.n].map(f=>document.fonts.load(f))); }catch(e){}
     allOf(P,'items').forEach(it=>thumb(it.type,it.color)); let guard=0; while(R3.ok&&THQ.length&&guard++<300) processThumbs();
@@ -3322,7 +3352,7 @@ async function exportPdf(){
       addPage(pg.c);
     }
     await saveFile(safeName()+'.pdf',makePdf(pages));
-  }catch(e){ console.error(e); toast('ทำ PDF ไม่สำเร็จ ลองอีกครั้ง'); if(P&&P.cur>=P.floors.length) P.cur=0; }
+  }catch(e){ console.error(e); toast('ทำ PDF ไม่สำเร็จ ลองอีกครั้ง'); if(P){ P.cur=clamp(curStart,0,P.floors.length-1); WC=null; refreshAfter(); renderFloorBar(); } }
   pdfBusy=false;
 }
 $('pdfBtn').addEventListener('click',exportPdf);
@@ -3344,13 +3374,13 @@ const Store={mode:'local',col:null,busy:{},again:{},unsub:null,t:null,lt:null,re
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
 function loadLocal(){ const s=lsGet(LSK); let o={}; if(s){ try{ o=JSON.parse(s)||{}; }catch(e){} } const out={}; Object.keys(o).forEach(id=>{ const p=cleanProject(o[id]); if(p) out[p.id]=p; }); return out; }
-function saveLocal(){ const o=Object.assign({},ALL); if(AUTO) delete o[AUTO]; lsSet(LSK,JSON.stringify(o)); }
+function saveLocal(){ const o=Object.assign({},ALL); if(AUTO) delete o[AUTO]; return lsSet(LSK,JSON.stringify(o)); }
 function savePrefs(){ lsSet(LSU,JSON.stringify({view:UI.view,labels:UI.labels,dims:UI.dims,wallMode:UI.wallMode,roof:UI.roof,wires:UI.wires,roofView:UI.roofView,sunHour:UI.sunHour})); }
 function loadPrefs(){ try{ const o=JSON.parse(lsGet(LSU)||'{}'); if(o.view) UI.view=o.view; if(typeof o.labels==='boolean') UI.labels=o.labels; if(typeof o.dims==='boolean') UI.dims=o.dims; if(o.wallMode) UI.wallMode=o.wallMode; if(typeof o.roof==='boolean') UI.roof=o.roof; if(typeof o.wires==='boolean') UI.wires=o.wires; if(ROOF_VIEWS.some(v=>v[0]===o.roofView)) UI.roofView=o.roofView; if(o.sunHour>=6&&o.sunHour<=18) UI.sunHour=+o.sunHour; }catch(e){} }
 function setSave(s){ const t={saving:'กำลังบันทึก…',cloud:'บันทึกแล้ว',local:'บันทึกในเครื่องนี้',err:'บันทึกไม่สำเร็จ',retry:'กำลังลองใหม่…'}[s]||''; $('saveTxt').textContent=t; $('saveDot').dataset.s=s; $('saveDot').title=t; }
 function saveSoon(){
   if(!P) return; P.updated=Date.now(); ALL[P.id]=P; setSave('saving');
-  clearTimeout(Store.lt); Store.lt=setTimeout(()=>{ saveLocal(); if(Store.mode!=='cloud') setSave('local'); },300);
+  clearTimeout(Store.lt); Store.lt=setTimeout(()=>{ const ok=saveLocal(); if(Store.mode==='cloud') return; setSave(ok?'local':'err'); if(!ok&&!Store.warned){ Store.warned=true; toast('เซฟในเครื่องไม่ได้ (เครื่องเต็ม หรือเปิดโหมดส่วนตัว) · กด "แปลนของฉัน" แล้วสำรองไฟล์ .json ไว้ก่อน'); } else if(ok) Store.warned=false; },300);
   if(Store.mode==='cloud'){ clearTimeout(Store.t); const id=P.id; Store.t=setTimeout(()=>cloudWrite(id),900); }
 }
 const packDoc=p=>({name:p.name,updated:p.updated,count:allOf(p,'items').length,rooms:allOf(p,'rooms').length,json:JSON.stringify(p)});
@@ -3404,13 +3434,13 @@ async function cloudRefresh(){
 const mostRecent=()=>Object.keys(ALL).sort((a,b)=>ALL[b].updated-ALL[a].updated)[0];
 function updProj(){ $('pName').textContent=P?P.name:''; }
 function openProject(id){
-  const p=ALL[id]; if(!p) return; P=p; SEL=null; D.pts=[]; UI.arm=null; if(WK.on) setWalk(false); if(UI.terra) setTerra(false);
+  const p=ALL[id]; if(!p) return; P=p; SEL=null; clearFollow(); D.pts=[]; UI.arm=null; if(WK.on) setWalk(false); if(UI.terra) setTerra(false);
   WC=null; R3.key=null; resetHistory(); lsSet(LSL,id); refreshAfter(); renderPanel(); updateFab(); updProj(); renderFloorBar(); fit2d(); if(R3.ok&&W3>1) fit3d(); subscribeCurrent();
 }
 function addProject(p,msg){ ALL[p.id]=p; openProject(p.id); saveSoon(); hideHome(); if(msg) toast(msg); }
 function putProject(p){ ALL[p.id]=p; saveLocal(); if(Store.mode==='cloud') cloudWrite(p.id); }
 function deleteProject(id){
-  delete ALL[id]; if(AUTO===id) AUTO=null; saveLocal(); if(Store.mode==='cloud'){ Store.col.doc(id).delete().catch(()=>{}); }
+  delete ALL[id]; if(AUTO===id) AUTO=null; saveLocal(); bgDropPrefix(id+'/'); if(Store.mode==='cloud'){ Store.col.doc(id).delete().catch(()=>{}); }
   if(!Object.keys(ALL).length){ const p=starterProject(); ALL[p.id]=p; openProject(p.id); saveSoon(); } else if(P&&P.id===id) openProject(mostRecent());
 }
 
@@ -3535,7 +3565,7 @@ applyCam();
 requestAnimationFrame(loop);
 showHome();
 initCloud().catch(()=>setSave('local'));
-window.__room={get P(){return P;},get SEL(){return SEL;},UI,BG,applyCam,setWalk,WK,panoBlob,makePano,traceWalls,pickBgFile,setXray,setSec,setTerra,sculpt,toggleMulti,curveWall,offsetPts,draw2d,C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf,showHome,pick3,CAM,w2s,setNight,elecStats};
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__room={get P(){return P;},get SEL(){return SEL;},UI,BG,applyCam,setWalk,WK,panoBlob,makePano,traceWalls,pickBgFile,setXray,setSec,setTerra,sculpt,toggleMulti,curveWall,offsetPts,draw2d,C,select,addItem,setView,setTool,commit,undo,redo,act,openProject,fit2d,fit3d,PROB:()=>PROB,STATS:()=>STATS,Store,R3,setRoof,saveNow,exportPdf,makePdf,showHome,pick3,CAM,w2s,setNight,elecStats};
 })();
 </script>
 </body></html>
